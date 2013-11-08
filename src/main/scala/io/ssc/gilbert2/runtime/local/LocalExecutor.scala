@@ -20,7 +20,7 @@ package io.ssc.gilbert2.runtime.local
 
 import io.ssc.gilbert2._
 import org.apache.mahout.math.{DenseVector, Vector, SparseRowMatrix}
-import org.apache.mahout.math.function.{VectorFunction, DoubleDoubleFunction, DoubleFunction, Functions}
+import org.apache.mahout.math.function.Functions
 import io.ssc.gilbert2.runtime.VectorFunctions
 import io.ssc.gilbert2.AggregateMatrixTransformation
 import io.ssc.gilbert2.MatrixMult
@@ -29,11 +29,11 @@ import io.ssc.gilbert2.WriteMatrix
 import io.ssc.gilbert2.Transpose
 import io.ssc.gilbert2.LoadMatrix
 import io.ssc.gilbert2.ScalarMatrixTransformation
-import scala.math
 import org.apache.mahout.math.random.Normal
 import io.ssc.gilbert2.optimization.CommonSubexpressionDetector
 import io.ssc.gilbert2.shell.printPlan
 
+import scala.io.Source
 
 object LocalExecutorRunner {
 
@@ -69,291 +69,167 @@ class LocalExecutor extends Executor {
   //TODO refactor
   protected def execute(executable: Executable): Any = {
 
-    //println("Executing " + executable)
-
     executable match {
-      case (op: LoadMatrix) => {
+      case (transformation: LoadMatrix) => {
 
-        executionOrder += 1
+        handle[LoadMatrix, Unit](transformation,
+            { _ => },
+            { (transformation, _) => {
 
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
+              //TODO nicer
+              var entries = Seq[(Int, Int, Double)]()
+              for (line <- Source.fromFile(transformation.path).getLines()) {
+                val fields = line.split(" ")
+                entries = entries ++ Seq((fields(0).toInt, fields(1).toInt, fields(2).toDouble))
+              }
 
-        println(executionOrder + " " + op)
+              val maxColumn = entries.map({ case (_, column, _) => column }).reduce(math.max)
+              val maxRow = entries.map({ case (row, _, _) => row }).reduce(math.max) 
 
-        val matrix = new SparseRowMatrix(3, 3)
-        matrix.setQuick(0, 0, 3)
-        matrix.setQuick(0, 2, 1)
-        matrix.setQuick(1, 0, 7)
-        matrix.setQuick(1, 1, 8)
-        matrix.setQuick(2, 0, 3)
-        matrix.setQuick(2, 1, 9)
-        matrix.setQuick(2, 2, 8)
+              val matrix = new SparseRowMatrix(maxRow + 1, maxColumn + 1)
 
-        symbolTable += (executionOrder -> matrix)
+              entries.foreach({ case (row, column, value) => matrix.setQuick(row, column, value) })
 
-        matrix
+              matrix
+            }})
       }
 
-      case (op: CellwiseMatrixTransformation) => {
+      case (transformation: CellwiseMatrixTransformation) => {
 
-        val matrix = evaluate(op.matrix)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        op.operation match {
-          case ScalarOperation.Binarize => {
-            matrix.assign(VectorFunctions.binarize)
-          }
-        }
-
-        symbolTable += (executionOrder -> matrix)
-
-        matrix
+        handle[CellwiseMatrixTransformation, SparseRowMatrix](transformation,
+            { transformation => evaluate(transformation.matrix) },
+            { (transformation, matrix) => {
+              transformation.operation match {
+                case ScalarOperation.Binarize => { matrix.assign(VectorFunctions.binarize) }
+              }
+            }})
       }
 
-      case (op: Transpose) => {
+      case (transformation: Transpose) => {
 
-        val matrix = evaluate(op.matrix)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val transposedMatrix = matrix.transpose()
-
-        symbolTable += (executionOrder -> transposedMatrix)
-
-        transposedMatrix
+        handle[Transpose, SparseRowMatrix](transformation,
+            { transformation => evaluate(transformation.matrix) },
+            { (transformation, matrix) => matrix.transpose() })
       }
 
-      case (op: MatrixMult) => {
+      case (transformation: MatrixMult) => {
 
-        val leftMatrix = evaluate(op.left)
-        val rightMatrix = evaluate(op.right)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val resultMatrix = leftMatrix.times(rightMatrix)
-
-        symbolTable += (executionOrder -> resultMatrix)
-
-        resultMatrix
+        handle[MatrixMult, (SparseRowMatrix, SparseRowMatrix)](transformation,
+            { transformation => (evaluate(transformation.left), evaluate(transformation.right)) },
+            { case (_, (leftMatrix, rightMatrix)) => leftMatrix.times(rightMatrix) })
       }
 
-      case (op: AggregateMatrixTransformation) => {
+      case (transformation: AggregateMatrixTransformation) => {
 
-        val matrix = evaluate(op.matrix)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val result = op.operation match {
-          case (ScalarsOperation.Maximum) => { matrix.aggregate(max, identity) }
-        }
-
-        symbolTable += (executionOrder -> result)
-
-        result
+        handle[AggregateMatrixTransformation, SparseRowMatrix](transformation,
+            { transformation => evaluate(transformation.matrix) },
+            { (transformation, matrix) => {
+              transformation.operation match {
+                case (ScalarsOperation.Maximum) => { matrix.aggregate(VectorFunctions.max, VectorFunctions.identity) }
+              }
+            }})
       }
 
-      case (op: ScalarMatrixTransformation) => {
+      case (transformation: ScalarMatrixTransformation) => {
 
-        val matrix = evaluate(op.matrix)
-        val scalar = evaluateAsScalar(op.scalar)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val resultMatrix = op.operation match {
-          case (ScalarsOperation.Division) => {
-            matrix.divide(scalar)
-          }
-        }
-
-        symbolTable += (executionOrder -> resultMatrix)
-
-        resultMatrix
+        handle[ScalarMatrixTransformation, (SparseRowMatrix, Double)](transformation,
+            { transformation => (evaluate(transformation.matrix), (evaluateAsScalar(transformation.scalar))) },
+            { case (transformation, (matrix, scalar)) => {
+              transformation match {
+                case (ScalarsOperation.Division) => { matrix.divide(scalar) }
+              }
+            }})
       }
 
-      case (op: MatrixToVectorTransformation) => {
+      case (transformation: MatrixToVectorTransformation) => {
 
-        val matrix = evaluate(op.matrix)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val vector = op.operation match {
-          case (MatrixwiseOperation.RowSums) => {
-            matrix.aggregateRows(new VectorFunction {
-              def apply(v: Vector) = v.zSum()
-            })
-          }
-        }
-
-        symbolTable += (executionOrder -> vector)
-
-        vector
+        handle[MatrixToVectorTransformation, SparseRowMatrix](transformation,
+            { transformation => evaluate(transformation.matrix) },
+            { (transformation, matrix) => {
+              transformation.operation match {
+                case (MatrixwiseOperation.RowSums) => { matrix.aggregateRows(VectorFunctions.sum) }
+              }
+            }})
       }
 
-      case (op: ScalarVectorTransformation) => {
+      case (transformation: ScalarVectorTransformation) => {
 
-        val vector = evaluateAsVector(op.vector)
-        val scalar = evaluateAsScalar(op.scalar)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val resultVector = op.operation match {
-          case (ScalarsOperation.Division) => {
-            vector.assign(Functions.DIV, scalar)
-          }
-        }
-
-        symbolTable += (executionOrder -> resultVector)
-
-        resultVector
+        handle[ScalarVectorTransformation, (Vector, Double)](transformation,
+            { transformation => (evaluateAsVector(transformation.vector), evaluateAsScalar(transformation.scalar)) },
+            { case (transformation, (vector, scalar)) => {
+              transformation.operation match {
+                case (ScalarsOperation.Division) => { vector.assign(Functions.DIV, scalar) }
+              }
+            }})
       }
 
-      case (op: ones) => {
+      case (transformation: ones) => {
 
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val vector = new DenseVector(op.size).assign(1)
-
-        symbolTable += (executionOrder -> vector)
-
-        vector
+        handle[ones, Unit](transformation,
+            { _ => },
+            { (transformation, _) => new DenseVector(transformation.size).assign(1) })
       }
 
-      case (op: rand) => {
+      case (transformation: rand) => {
 
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        val vector = new DenseVector(op.size).assign(new Normal(op.mean, op.std))
-
-        symbolTable += (executionOrder -> vector)
-
-        vector
+        handle[rand, Unit](transformation,
+            { _ => },
+            { (transformation, _) => {
+              new DenseVector(transformation.size).assign(new Normal(transformation.mean, transformation.std))
+            }})
       }
 
-      case (op: WriteMatrix) => {
+      case (transformation: WriteMatrix) => {
 
-        val matrix = evaluate(op.matrix)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        symbolTable += (executionOrder -> matrix)
-
-        println(matrix)
+        handle[WriteMatrix, SparseRowMatrix](transformation,
+            { transformation => evaluate(transformation.matrix) },
+            { (_, matrix) => println(matrix) })
       }
 
-      case (op: WriteVector) => {
+      case (transformation: WriteVector) => {
 
-        val vector = evaluateAsVector(op.vector)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        symbolTable += (executionOrder -> vector)
-
-        println(vector)
+        handle[WriteVector, Vector](transformation,
+            { transformation => evaluateAsVector(transformation.vector) },
+            { (_, vector) => println(vector) })
       }
 
-      case (op: scalar) => {
+      case (transformation: scalar) => {
 
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        symbolTable += (executionOrder -> op.value)
-
-        op.value
+        handle[scalar, Unit](transformation,
+            { _ => },
+            { (transformation, _) => transformation.value })
       }
 
-      case (op: WriteScalarRef) => {
+      case (transformation: WriteScalarRef) => {
 
-        val scalar = evaluateAsScalar(op.scalar)
-
-        executionOrder += 1
-
-        if (redirects.contains(executionOrder)) {
-          return symbolTable(redirects(executionOrder))
-        }
-
-        println(executionOrder + " " + op)
-
-        symbolTable += (executionOrder -> scalar)
-
-        println(scalar)
+        handle[WriteScalarRef, Double](transformation,
+            { transformation => evaluateAsScalar(transformation.scalar) },
+            { (_, scalar) => println(scalar) })
       }        
     }
 
   }
+
+  def handle[T <: Executable, I](executable: T, retrieveInput: (T) => I, handle: (T, I) => Any): Any = {
+
+    val input = retrieveInput(executable)
+
+    executionOrder += 1
+
+    /* check if this a common subexpression which we already processed */
+    if (redirects.contains(executionOrder)) {
+      return symbolTable(redirects(executionOrder))
+    }
+
+    println(executionOrder + " " + executable)
+
+    val output = handle(executable, input)
+
+    symbolTable += (executionOrder -> output)
+
+    output
+  }
+
 
   def evaluate(in: Executable) = {
     execute(in).asInstanceOf[SparseRowMatrix]
@@ -367,12 +243,6 @@ class LocalExecutor extends Executor {
     execute(in).asInstanceOf[Double]
   }
 
-  def max = new DoubleDoubleFunction {
-    def apply(p1: Double, p2: Double) = { math.max(p1, p2) }
-  }
 
-  def identity = new DoubleFunction {
-    def apply(p1: Double) = { p1 }
-  }
 }
 

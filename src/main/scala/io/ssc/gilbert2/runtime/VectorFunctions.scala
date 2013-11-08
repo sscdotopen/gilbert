@@ -18,7 +18,8 @@
 
 package io.ssc.gilbert2.runtime
 
-import org.apache.mahout.math.function.DoubleFunction
+import org.apache.mahout.math.function.{DoubleDoubleFunction, VectorFunction, DoubleFunction}
+import org.apache.mahout.math.Vector
 
 object VectorFunctions {
 
@@ -26,5 +27,17 @@ object VectorFunctions {
     def apply(v: Double) = {
       if (v == 0) { 0 } else { 1 }
     }
+  }
+
+  def sum = new VectorFunction {
+    def apply(v: Vector) = v.zSum()
+  }
+
+  def max = new DoubleDoubleFunction {
+    def apply(p1: Double, p2: Double) = { math.max(p1, p2) }
+  }
+
+  def identity = new DoubleFunction {
+    def apply(p1: Double) = { p1 }
   }
 }
