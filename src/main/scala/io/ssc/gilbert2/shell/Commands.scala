@@ -46,6 +46,6 @@ object withSpark {
       case (scalar: ScalarRef) => WriteScalarRef(scalar)
     }
 
-    SparkExecutor.run(write)
+    new SparkExecutor().run(write)
   }
 }

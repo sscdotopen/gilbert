@@ -24,9 +24,7 @@ import org.apache.mahout.math.Vector
 object VectorFunctions {
 
   def binarize = new DoubleFunction {
-    def apply(v: Double) = {
-      if (v == 0) { 0 } else { 1 }
-    }
+    def apply(value: Double) = { if (value == 0) { 0 } else { 1 } }
   }
 
   def sum = new VectorFunction {
@@ -34,10 +32,10 @@ object VectorFunctions {
   }
 
   def max = new DoubleDoubleFunction {
-    def apply(p1: Double, p2: Double) = { math.max(p1, p2) }
+    def apply(value1: Double, value2: Double) = math.max(value1, value2)
   }
 
   def identity = new DoubleFunction {
-    def apply(p1: Double) = { p1 }
+    def apply(value: Double) = value
   }
 }

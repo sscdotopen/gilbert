@@ -31,37 +31,33 @@ import io.ssc.gilbert2.LoadMatrix
 import io.ssc.gilbert2.ScalarMatrixTransformation
 import org.apache.mahout.math.random.Normal
 import io.ssc.gilbert2.optimization.CommonSubexpressionDetector
-import io.ssc.gilbert2.shell.printPlan
+import io.ssc.gilbert2.shell.{local, printPlan}
 
 import scala.io.Source
 
 object LocalExecutorRunner {
 
   def main(args: Array[String]): Unit = {
-    val A = LoadMatrix("/A")
+    val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv")
 
     val B = A.binarize()
 
     val C = B.t * B
 
-    new LocalExecutor().run(WriteMatrix(C))
+    val D = C / C.max()
+
+    local(D)
   }
 }
 
 class LocalExecutor extends Executor {
 
-  var executionOrder = 0
-  var symbolTable = Map[Int,Any]()
-
-  //TODO ugly, refactor
-  var redirects = Map[Int,Int]()
 
   def run(executable: Executable) = {
 
-    redirects = new CommonSubexpressionDetector().find(executable)
+    setRedirects(new CommonSubexpressionDetector().find(executable))
 
     printPlan(executable)
-    println("common subexpressions " + redirects)
 
     execute(executable)
   }
@@ -97,7 +93,7 @@ class LocalExecutor extends Executor {
       case (transformation: CellwiseMatrixTransformation) => {
 
         handle[CellwiseMatrixTransformation, SparseRowMatrix](transformation,
-            { transformation => evaluate(transformation.matrix) },
+            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case ScalarOperation.Binarize => { matrix.assign(VectorFunctions.binarize) }
@@ -108,21 +104,23 @@ class LocalExecutor extends Executor {
       case (transformation: Transpose) => {
 
         handle[Transpose, SparseRowMatrix](transformation,
-            { transformation => evaluate(transformation.matrix) },
+            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
             { (transformation, matrix) => matrix.transpose() })
       }
 
       case (transformation: MatrixMult) => {
 
         handle[MatrixMult, (SparseRowMatrix, SparseRowMatrix)](transformation,
-            { transformation => (evaluate(transformation.left), evaluate(transformation.right)) },
+            { transformation => {
+              (evaluate[SparseRowMatrix](transformation.left), evaluate[SparseRowMatrix](transformation.right))
+            }},
             { case (_, (leftMatrix, rightMatrix)) => leftMatrix.times(rightMatrix) })
       }
 
       case (transformation: AggregateMatrixTransformation) => {
 
         handle[AggregateMatrixTransformation, SparseRowMatrix](transformation,
-            { transformation => evaluate(transformation.matrix) },
+            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case (ScalarsOperation.Maximum) => { matrix.aggregate(VectorFunctions.max, VectorFunctions.identity) }
@@ -133,9 +131,11 @@ class LocalExecutor extends Executor {
       case (transformation: ScalarMatrixTransformation) => {
 
         handle[ScalarMatrixTransformation, (SparseRowMatrix, Double)](transformation,
-            { transformation => (evaluate(transformation.matrix), (evaluateAsScalar(transformation.scalar))) },
+            { transformation => {
+              (evaluate[SparseRowMatrix](transformation.matrix), (evaluate[Double](transformation.scalar)))
+            }},
             { case (transformation, (matrix, scalar)) => {
-              transformation match {
+              transformation.operation match {
                 case (ScalarsOperation.Division) => { matrix.divide(scalar) }
               }
             }})
@@ -144,7 +144,7 @@ class LocalExecutor extends Executor {
       case (transformation: MatrixToVectorTransformation) => {
 
         handle[MatrixToVectorTransformation, SparseRowMatrix](transformation,
-            { transformation => evaluate(transformation.matrix) },
+            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case (MatrixwiseOperation.RowSums) => { matrix.aggregateRows(VectorFunctions.sum) }
@@ -155,7 +155,7 @@ class LocalExecutor extends Executor {
       case (transformation: ScalarVectorTransformation) => {
 
         handle[ScalarVectorTransformation, (Vector, Double)](transformation,
-            { transformation => (evaluateAsVector(transformation.vector), evaluateAsScalar(transformation.scalar)) },
+            { transformation => (evaluate[Vector](transformation.vector), evaluate[Double](transformation.scalar)) },
             { case (transformation, (vector, scalar)) => {
               transformation.operation match {
                 case (ScalarsOperation.Division) => { vector.assign(Functions.DIV, scalar) }
@@ -182,14 +182,14 @@ class LocalExecutor extends Executor {
       case (transformation: WriteMatrix) => {
 
         handle[WriteMatrix, SparseRowMatrix](transformation,
-            { transformation => evaluate(transformation.matrix) },
+            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
             { (_, matrix) => println(matrix) })
       }
 
       case (transformation: WriteVector) => {
 
         handle[WriteVector, Vector](transformation,
-            { transformation => evaluateAsVector(transformation.vector) },
+            { transformation => evaluate[Vector](transformation.vector) },
             { (_, vector) => println(vector) })
       }
 
@@ -203,46 +203,11 @@ class LocalExecutor extends Executor {
       case (transformation: WriteScalarRef) => {
 
         handle[WriteScalarRef, Double](transformation,
-            { transformation => evaluateAsScalar(transformation.scalar) },
+            { transformation => evaluate[Double](transformation.scalar) },
             { (_, scalar) => println(scalar) })
       }        
     }
 
   }
-
-  def handle[T <: Executable, I](executable: T, retrieveInput: (T) => I, handle: (T, I) => Any): Any = {
-
-    val input = retrieveInput(executable)
-
-    executionOrder += 1
-
-    /* check if this a common subexpression which we already processed */
-    if (redirects.contains(executionOrder)) {
-      return symbolTable(redirects(executionOrder))
-    }
-
-    println(executionOrder + " " + executable)
-
-    val output = handle(executable, input)
-
-    symbolTable += (executionOrder -> output)
-
-    output
-  }
-
-
-  def evaluate(in: Executable) = {
-    execute(in).asInstanceOf[SparseRowMatrix]
-  }
-
-  def evaluateAsVector(in: io.ssc.gilbert2.Vector) = {
-    execute(in).asInstanceOf[Vector]
-  }
-
-  def evaluateAsScalar(in: ScalarRef) = {
-    execute(in).asInstanceOf[Double]
-  }
-
-
 }
 

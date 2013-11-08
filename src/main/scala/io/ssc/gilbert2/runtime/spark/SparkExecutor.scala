@@ -34,8 +34,25 @@ import io.ssc.gilbert2.LoadMatrix
 
 import org.apache.mahout.math.function.Functions
 import org.apache.mahout.math.random.Normal
+import io.ssc.gilbert2.optimization.CommonSubexpressionDetector
+import io.ssc.gilbert2.shell.{printPlan, withSpark, local}
 
-object SparkExecutor extends Executor {
+object SparkExecutorRunner {
+
+  def main(args: Array[String]): Unit = {
+    val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv")
+
+    val B = A.binarize()
+
+    val C = B.t * B
+
+    val D = C / C.max()
+
+    withSpark(D)
+  }
+}
+
+class SparkExecutor extends Executor {
 
   System.setProperty("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
   System.setProperty("spark.kryo.registrator", classOf[DenseVector].getName)
@@ -46,164 +63,209 @@ object SparkExecutor extends Executor {
   val sc = new SparkContext("local", "Gilbert")
   val degreeOfParallelism = 2
 
-
-  def main(args: Array[String]): Unit = {
-    run(Examples.cooccurrences)
-  }
-
   def run(executable: Executable) = {
+
+    setRedirects(new CommonSubexpressionDetector().find(executable))
+
+    printPlan(executable)
+
     execute(executable)
   }
 
   protected def execute(executable: Executable): Any = {
 
     executable match {
-      case (op: LoadMatrix) => {
 
-        sc.textFile(op.path, degreeOfParallelism).map({ line => {
-          val fields = line.split(" ")
-          (fields(0).toInt, fields(1).toInt, fields(2).toDouble)
-        }}).groupBy(_._1).flatMap({ case (index, elements) => {
-          val vector = new RandomAccessSparseVector(Integer.MAX_VALUE)
-          for ((_, column, value) <- elements) {
-            vector.setQuick(column, value)
-          }
-          Seq((index, new SequentialAccessSparseVector(vector)))
-        }})
-      }
+      case (transformation: LoadMatrix) => {
 
-      case (op: CellwiseMatrixTransformation) => {
-        val matrix = evaluate(op.matrix)
-
-        op.operation match {
-          case ScalarOperation.Binarize => {
-
-            matrix.map({ case (index, row) => {
-              //TODO add binarize to mahout to only apply it to non zeros!
-              (index, row.assign(VectorFunctions.binarize))
+        handle[LoadMatrix, Unit](transformation,
+            { _ => },
+            { (transformation, _) => {
+              sc.textFile(transformation.path, degreeOfParallelism).map({ line => {
+                val fields = line.split(" ")
+                (fields(0).toInt, fields(1).toInt, fields(2).toDouble)
+              }}).groupBy(_._1).flatMap({ case (index, elements) => {
+                val vector = new RandomAccessSparseVector(Integer.MAX_VALUE)
+                for ((_, column, value) <- elements) {
+                  vector.setQuick(column, value)
+                }
+                Seq((index, new SequentialAccessSparseVector(vector)))
+              }})
             }})
-          }
-        }
       }
 
-      case (op: AggregateMatrixTransformation) => {
-        val matrix = evaluate(op.matrix)
+      case (transformation: CellwiseMatrixTransformation) => {
 
-        op.operation match {
-          case ScalarsOperation.Maximum => {
-            matrix.map({ case (index, row) => row.maxValue() }).aggregate(Double.MinValue)(math.max, math.max)
-          }
-        }
+        handle[CellwiseMatrixTransformation, RDD[(Int, Vector)]](transformation,
+            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+            { (transformation, matrix) => {
+              transformation.operation match {
+                case ScalarOperation.Binarize => {
+                  //TODO add binarize to mahout to only apply it to non zeros!
+                  matrix.map({ case (index, row) => (index, row.assign(VectorFunctions.binarize)) })
+                }
+              }
+            }})
       }
 
-      case (op: Transpose) => {
-        val matrix = evaluate(op.matrix)
+      case (transformation: AggregateMatrixTransformation) => {
 
-        matrix.flatMap({ case (index, row) => {
-            for (elem <- row.nonZeroes())
-              yield { (elem.index(), index, elem.get()) }
+        handle[AggregateMatrixTransformation, RDD[(Int, Vector)]](transformation,
+            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+            { (transformation, matrix) => {
+              transformation.operation match {
+                case ScalarsOperation.Maximum => {
+                  matrix.map({ case (index, row) => row.maxValue() }).aggregate(Double.MinValue)(math.max, math.max)
+                }
+              }
+            }})
+      }
+
+      case (transformation: Transpose) => {
+
+        handle[Transpose, RDD[(Int, Vector)]](transformation,
+            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix)},
+            { (transformation, matrix) => {
+              //TODO make reduce combinable
+              matrix.flatMap({ case (index, row) => {
+                for (elem <- row.nonZeroes())
+                yield { (elem.index(), index, elem.get()) }
+              }})
+                .groupBy(_._1).map({ case (index, entries) => {
+                val row = new RandomAccessSparseVector(Integer.MAX_VALUE)
+                entries.foreach({ case (_, columnIndex, value) => row.setQuick(columnIndex, value) })
+                (index, new SequentialAccessSparseVector(row))
+              }})
+            }})
+      }
+
+       //TODO we should eliminate transpose before
+      case (transformation: MatrixMult) => {
+
+        handle[MatrixMult, (RDD[(Int,Vector)], RDD[(Int,Vector)])](transformation,
+            { transformation => {
+              val leftMatrix = evaluate[RDD[(Int,Vector)]](transformation.left)
+              val rightMatrix = evaluate[RDD[(Int,Vector)]](transformation.right)
+              (leftMatrix, rightMatrix)
+            }},
+            { case (_, (leftMatrix, rightMatrix)) => {
+
+              //TODO make reduce combinable
+              /* row outer product formulation of matrix multiplication */
+              val transposedLeftMatrix = leftMatrix.flatMap({ case (index, row) => {
+                  for (elem <- row.nonZeroes())
+                    yield { (elem.index(), index, elem.get()) }
+                }})
+                .groupBy(_._1).map({ case (index, entries) => {
+                  val row = new RandomAccessSparseVector(Integer.MAX_VALUE)
+                  entries.foreach({ case (_, columnIndex, value) => row.setQuick(columnIndex, value) })
+                  (index, new SequentialAccessSparseVector(row))
+                }})
+
+              transposedLeftMatrix.join(rightMatrix).flatMap({ case (_, (column, row)) => {
+                for (elem <- column.nonZeroes())
+                yield { (elem.index(), row.times(elem.get())) }
+              }})
+              .reduceByKey(_.assign(_, Functions.PLUS))
+
+            }})
+      }
+
+      case (transformation: ScalarMatrixTransformation) => {
+
+        handle[ScalarMatrixTransformation, (RDD[(Int,Vector)], Double)](transformation,
+          { transformation => {
+            (evaluate[RDD[(Int,Vector)]](transformation.matrix), evaluate[Double](transformation.scalar))
+          }},
+          { case (transformation, (matrix, value)) => {
+            transformation.operation match {
+              case (ScalarsOperation.Division) => {
+                matrix.map({ case (index, row) => (index, row.assign(Functions.DIV, value)) })
+              }
+            }
           }})
-          .groupBy(_._1).map({ case (index, entries) => {
-            val row = new RandomAccessSparseVector(Integer.MAX_VALUE)
-            entries.foreach({ case (_, columnIndex, value) => row.setQuick(columnIndex, value) })
-            (index, new SequentialAccessSparseVector(row))
-          }})
       }
 
-      case (op: MatrixMult) => {
+      case (transformation: ones) => {
 
-        /* row outer product formulation of matrix multiplication */
-        val leftMatrix = evaluate(Transpose(op.left))
-        val rightMatrix = evaluate(op.right)
-
-        leftMatrix.join(rightMatrix).flatMap({ case (_, (column, row)) => {
-            for (elem <- column.nonZeroes())
-              yield { (elem.index(), row.times(elem.get())) }
-          }})
-          .reduceByKey(_.assign(_, Functions.PLUS))
+        handle[ones, Unit](transformation,
+            { _ => },
+            { (transformation, _) => new DenseVector(transformation.size).assign(1) })
       }
 
-      case (op: ScalarMatrixTransformation) => {
-        val matrix = evaluate(op.matrix)
-        val scalar = evaluateAsScalar(op.scalar)
+      case (transformation: rand) => {
 
-        op.operation match {
-          case (ScalarsOperation.Division) => {
-            matrix.map({ case (index, row) => (index, row.assign(Functions.DIV, scalar)) })
-          }
-        }
+        handle[rand, Unit](transformation,
+            { _ => },
+            { (transformation, _) => {
+              new DenseVector(transformation.size).assign(new Normal(transformation.mean, transformation.std))
+            }})
       }
 
-      case (op: ones) => {
-        new DenseVector(op.size).assign(1)
-      }
 
-      case (op: rand) => {
-        new DenseVector(op.size).assign(new Normal(op.mean, op.std))
-      }
+      case (transformation: ScalarVectorTransformation) => {
 
-      case (op: ScalarVectorTransformation) => {
-        val vector = evaluateAsVector(op.vector)
-        val scalar = evaluateAsScalar(op.scalar)
-
-        op.operation match {
-          case (ScalarsOperation.Division) => {
-            vector.assign(Functions.DIV, scalar)
-          }
-        }
+        handle[ScalarVectorTransformation, (Vector, Double)](transformation,
+            { transformation => (evaluate[Vector](transformation.vector), evaluate[Double](transformation.scalar)) },
+            { case (transformation, (vector, scalar)) => {
+              transformation.operation match {
+                case (ScalarsOperation.Division) => { vector.assign(Functions.DIV, scalar) }
+              }
+            }})
       }
 
       //TODO we need a better way to do this, then copying to an array on the driver
-      case (op: MatrixToVectorTransformation) => {
+      case (transformation: MatrixToVectorTransformation) => {
 
-        val matrix = evaluate(op.matrix)
-
-        op.operation match {
-          case (MatrixwiseOperation.RowSums) => {
-            val sums = matrix.map({ case (index, row) => (index, row.zSum()) }).toArray()
-            val vector = new RandomAccessSparseVector(Integer.MAX_VALUE)
-            for ((row, sum) <- sums) {
-              vector.setQuick(row, sum)
-            }
-            new SequentialAccessSparseVector(vector)
-          }
-        }
+        handle[MatrixToVectorTransformation, RDD[(Int,Vector)]](transformation,
+            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+            { (transformation, matrix) => {
+              transformation.operation match {
+                case (MatrixwiseOperation.RowSums) => {
+                  val sums = matrix.map({ case (index, row) => (index, row.zSum()) }).toArray()
+                  val vector = new RandomAccessSparseVector(Integer.MAX_VALUE)
+                  for ((row, sum) <- sums) {
+                    vector.setQuick(row, sum)
+                  }
+                  new SequentialAccessSparseVector(vector)
+                }
+              }
+            }})
       }
 
-      case (op: WriteMatrix) => {
-        val matrix = evaluate(op.matrix)
-        matrix.toArray().foreach({ case (index, row) =>
-          println(index + " " + row)
-        })
+      case (transformation: WriteMatrix) => {
+
+        handle[WriteMatrix, RDD[(Int, Vector)]](transformation,
+            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+            { (_, matrix) => {
+              matrix.foreach({ case (index, row) =>
+                println(index + " " + row)
+              })
+            }})
       }
 
-      case (op: WriteVector) => {
-        val vector = evaluateAsVector(op.vector)
-        println(vector)
+      case (transformation: WriteVector) => {
+
+        handle[WriteVector, Vector](transformation,
+            { transformation => evaluate[Vector](transformation.vector) },
+            { (_, vector) => println(vector) })
       }
 
-      case (op: scalar) => {
-        op.value
+      case (transformation: scalar) => {
+
+        handle[scalar, Unit](transformation,
+            { _ => },
+            { (transformation, _) => transformation.value })
       }
 
-      case (op: WriteScalarRef) => {
-        val scalar = evaluateAsScalar(op.scalar)
-        println(scalar)
+      case (transformation: WriteScalarRef) => {
+
+        handle[WriteScalarRef, Double](transformation,
+            { transformation => evaluate[Double](transformation.scalar) },
+            { (transformation, value) => println(value) })
       }
     }
 
-  }
-
-  def evaluate(in: Executable): RDD[(Int, Vector)] = {
-    execute(in).asInstanceOf[RDD[(Int, Vector)]]
-  }
-
-  def evaluateAsVector(in: io.ssc.gilbert2.Vector) = {
-    execute(in).asInstanceOf[Vector]
-  }
-
-  def evaluateAsScalar(in: ScalarRef) = {
-    execute(in).asInstanceOf[Double]
   }
 
 }
