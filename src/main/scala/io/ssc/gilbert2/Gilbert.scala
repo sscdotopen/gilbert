@@ -45,9 +45,14 @@ abstract class Matrix extends Executable {
 }
 
 abstract class Vector extends Executable {
-  def norm2Squared() = { VectorAggregationTransformation(this, VectorwiseOperation.Norm2Squared) }
+
   def plus(other: Vector) = { CellwiseVectorTransformation(this, other, CellwiseOperation.Addition) }
   def dot(other: Vector) = { DotProductTransformation(this, other) }
+
+  def norm2Squared() = { VectorAggregationTransformation(this, VectorwiseOperation.Norm2Squared) }
+  def max() = { VectorAggregationTransformation(this, VectorwiseOperation.Max) }
+  def min() = { VectorAggregationTransformation(this, VectorwiseOperation.Min) }
+  def avg() = { VectorAggregationTransformation(this, VectorwiseOperation.Average) }
 
   def +(other: Vector) = plus(other)
   def /(scalar: ScalarRef) = { ScalarVectorTransformation(scalar, this, ScalarsOperation.Division) }

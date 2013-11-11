@@ -91,6 +91,12 @@ abstract class Walker {
         onLeave(transformation)
       }
 
+      case (transformation: VectorAggregationTransformation) => {
+        onArrival(transformation)
+        visit(transformation.vector)
+        onLeave(transformation)
+      }
+
       case (transformation: ones) => {
         onArrival(transformation)
         onLeave(transformation)

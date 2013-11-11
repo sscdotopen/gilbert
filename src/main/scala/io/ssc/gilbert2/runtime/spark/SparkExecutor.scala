@@ -53,9 +53,11 @@ object SparkExecutorRunner {
 }
 
 class SparkExecutor extends Executor {
+  
+  type RowPartitionedMatrix = RDD[(Int, Vector)]
 
   System.setProperty("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-  System.setProperty("spark.kryo.registrator", classOf[DenseVector].getName)
+  //System.setProperty("spark.kryo.registrator", classOf[DenseVector].getName)
   System.setProperty("spark.kryo.referenceTracking", "false")
   System.setProperty("spark.kryoserializer.buffer.mb", "8")
   System.setProperty("spark.locality.wait", "10000")
@@ -96,8 +98,8 @@ class SparkExecutor extends Executor {
 
       case (transformation: CellwiseMatrixTransformation) => {
 
-        handle[CellwiseMatrixTransformation, RDD[(Int, Vector)]](transformation,
-            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+        handle[CellwiseMatrixTransformation, RowPartitionedMatrix](transformation,
+            { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case ScalarOperation.Binarize => {
@@ -110,8 +112,8 @@ class SparkExecutor extends Executor {
 
       case (transformation: AggregateMatrixTransformation) => {
 
-        handle[AggregateMatrixTransformation, RDD[(Int, Vector)]](transformation,
-            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+        handle[AggregateMatrixTransformation, RowPartitionedMatrix](transformation,
+            { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case ScalarsOperation.Maximum => {
@@ -123,8 +125,8 @@ class SparkExecutor extends Executor {
 
       case (transformation: Transpose) => {
 
-        handle[Transpose, RDD[(Int, Vector)]](transformation,
-            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix)},
+        handle[Transpose, RowPartitionedMatrix](transformation,
+            { transformation => evaluate[RowPartitionedMatrix](transformation.matrix)},
             { (transformation, matrix) => {
               //TODO make reduce combinable
               matrix.flatMap({ case (index, row) => {
@@ -142,10 +144,10 @@ class SparkExecutor extends Executor {
        //TODO we should eliminate transpose before
       case (transformation: MatrixMult) => {
 
-        handle[MatrixMult, (RDD[(Int,Vector)], RDD[(Int,Vector)])](transformation,
+        handle[MatrixMult, (RowPartitionedMatrix, RowPartitionedMatrix)](transformation,
             { transformation => {
-              val leftMatrix = evaluate[RDD[(Int,Vector)]](transformation.left)
-              val rightMatrix = evaluate[RDD[(Int,Vector)]](transformation.right)
+              val leftMatrix = evaluate[RowPartitionedMatrix](transformation.left)
+              val rightMatrix = evaluate[RowPartitionedMatrix](transformation.right)
               (leftMatrix, rightMatrix)
             }},
             { case (_, (leftMatrix, rightMatrix)) => {
@@ -164,7 +166,7 @@ class SparkExecutor extends Executor {
 
               transposedLeftMatrix.join(rightMatrix).flatMap({ case (_, (column, row)) => {
                 for (elem <- column.nonZeroes())
-                yield { (elem.index(), row.times(elem.get())) }
+                  yield { (elem.index(), row.times(elem.get())) }
               }})
               .reduceByKey(_.assign(_, Functions.PLUS))
 
@@ -173,9 +175,9 @@ class SparkExecutor extends Executor {
 
       case (transformation: ScalarMatrixTransformation) => {
 
-        handle[ScalarMatrixTransformation, (RDD[(Int,Vector)], Double)](transformation,
+        handle[ScalarMatrixTransformation, (RowPartitionedMatrix, Double)](transformation,
           { transformation => {
-            (evaluate[RDD[(Int,Vector)]](transformation.matrix), evaluate[Double](transformation.scalar))
+            (evaluate[RowPartitionedMatrix](transformation.matrix), evaluate[Double](transformation.scalar))
           }},
           { case (transformation, (matrix, value)) => {
             transformation.operation match {
@@ -214,11 +216,25 @@ class SparkExecutor extends Executor {
             }})
       }
 
+      case (transformation: VectorAggregationTransformation) => {
+
+        handle[VectorAggregationTransformation, Vector](transformation,
+        { transformation => evaluate[Vector](transformation.vector) },
+        { (transformation, vector) => {
+          transformation.operation match {
+            case (VectorwiseOperation.Norm2Squared) => vector.norm(2)
+            case (VectorwiseOperation.Max) => vector.maxValue()
+            case (VectorwiseOperation.Min) => vector.minValue()
+            case (VectorwiseOperation.Average) => vector.zSum() / vector.size()
+          }
+        }})
+      }
+
       //TODO we need a better way to do this, then copying to an array on the driver
       case (transformation: MatrixToVectorTransformation) => {
 
-        handle[MatrixToVectorTransformation, RDD[(Int,Vector)]](transformation,
-            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+        handle[MatrixToVectorTransformation, RowPartitionedMatrix](transformation,
+            { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case (MatrixwiseOperation.RowSums) => {
@@ -235,8 +251,8 @@ class SparkExecutor extends Executor {
 
       case (transformation: WriteMatrix) => {
 
-        handle[WriteMatrix, RDD[(Int, Vector)]](transformation,
-            { transformation => evaluate[RDD[(Int,Vector)]](transformation.matrix) },
+        handle[WriteMatrix, RowPartitionedMatrix](transformation,
+            { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
             { (_, matrix) => {
               matrix.foreach({ case (index, row) =>
                 println(index + " " + row)

@@ -163,6 +163,20 @@ class LocalExecutor extends Executor {
             }})
       }
 
+      case (transformation: VectorAggregationTransformation) => {
+
+        handle[VectorAggregationTransformation, Vector](transformation,
+            { transformation => evaluate[Vector](transformation.vector) },
+            { (transformation, vector) => {
+              transformation.operation match {
+                case (VectorwiseOperation.Norm2Squared) => vector.norm(2)
+                case (VectorwiseOperation.Max) => vector.maxValue()
+                case (VectorwiseOperation.Min) => vector.minValue()
+                case (VectorwiseOperation.Average) => vector.zSum() / vector.size()
+              }
+            }})
+      }
+
       case (transformation: ones) => {
 
         handle[ones, Unit](transformation,

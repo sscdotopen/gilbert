@@ -90,6 +90,11 @@ class PlanPrinter {
         print(op.vector, depth + 1)
       }
 
+      case (op: VectorAggregationTransformation) => {
+        printIndented(depth, "VectorAggregationTransformation [" + op.operation + "]")
+        print(op.vector, depth + 1)
+      }
+
       case (op: ones) => {
         printIndented(depth, op.toString)
       }

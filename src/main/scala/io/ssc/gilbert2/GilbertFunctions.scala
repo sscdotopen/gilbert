@@ -28,6 +28,15 @@ object bin {
 
 object max {
   def apply(matrix: Matrix) = matrix.max()
+  def apply(vector: Vector) = vector.max()
+}
+
+object min {
+  def apply(vector: Vector) = vector.min()
+}
+
+object avg {
+  def apply(vector: Vector) = vector.avg()
 }
 
 object rowSum {
