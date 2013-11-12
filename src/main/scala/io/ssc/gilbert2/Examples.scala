@@ -18,12 +18,13 @@
 
 package io.ssc.gilbert2
 
+import io.ssc.gilbert2.GilbertImplicits._
 
 object Examples {
 
   def cooccurrences = {
 
-    val A = load("/A")
+    val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
     val B = bin(A)
     val C = B.t * B
@@ -35,24 +36,19 @@ object Examples {
 
   def pageRank = {
 
-    val A = LoadMatrix("/A")
-    val p = LoadVector("/p")
-    val e = LoadVector("/e")
-    val beta = scalar(0.85)
-    val one = scalar(1)
+    val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    //TODO start loop
-    val p_next = beta * A * p + (one - beta) * e
-    //TODO end loop
+    val initialRanks = ones(3) / scalar(3)
+    val e = ones(3)
 
-    p_next
+    fixpoint(initialRanks, { p => scalar(0.85) * A * p + scalar(0.15) * e })
   }
 
   def linearRegression = {
 
     val minusOne = scalar(-1)
 
-    val V = LoadMatrix("/X")
+    val V = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
     val y = LoadVector("/y")
 
     val w = LoadVector("/w")

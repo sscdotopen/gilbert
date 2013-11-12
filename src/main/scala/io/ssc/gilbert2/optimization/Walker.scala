@@ -47,6 +47,18 @@ abstract class Walker {
         onLeave(transformation)
       }
 
+      case (transformation: FixpointIteration) => {
+        onArrival(transformation)
+        visit(transformation.initialState)
+        visit(transformation.updatePlan)
+        onLeave(transformation)
+      }
+
+      case (transformation: IterationStatePlaceholder) => {
+        onArrival(transformation)
+        onLeave(transformation)
+      }
+
       case (transformation: CellwiseMatrixTransformation) => {
         onArrival(transformation)
         visit(transformation.matrix)
@@ -79,6 +91,13 @@ abstract class Walker {
         onLeave(transformation)
       }
 
+      case (transformation: MatrixVectorMult) => {
+        onArrival(transformation)
+        visit(transformation.matrix)
+        visit(transformation.vector)
+        onLeave(transformation)
+      }
+
       case (transformation: MatrixToVectorTransformation) => {
         onArrival(transformation)
         visit(transformation.matrix)
@@ -88,6 +107,7 @@ abstract class Walker {
       case (transformation: ScalarVectorTransformation) => {
         onArrival(transformation)
         visit(transformation.vector)
+        visit(transformation.scalar)
         onLeave(transformation)
       }
 

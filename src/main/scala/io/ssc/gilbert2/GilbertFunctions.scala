@@ -19,8 +19,15 @@
 package io.ssc.gilbert2
 
 object load {
-  def apply(path: String) = LoadMatrix(path)
+  def apply(path: String, numRows: Int, numColumns: Int) = LoadMatrix(path, numRows, numColumns)
 }
+
+object fixpoint {
+  def apply(initialState: Vector, updateFunction: Vector => Vector) = {
+    new FixpointIteration(initialState, updateFunction)
+  }
+}
+
 
 object bin {
   def apply(matrix: Matrix) = matrix.binarize()
@@ -41,4 +48,12 @@ object avg {
 
 object rowSum {
   def apply(matrix: Matrix) = matrix.rowSum()
+}
+
+object norm2Squared {
+  def apply(vector: Vector) = vector.norm2Squared
+}
+
+object norm2 {
+  def apply(vector: Vector) = vector.norm2
 }

@@ -16,16 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2.optimization
+package io.ssc.gilbert2
 
-import io.ssc.gilbert2.shell.printPlan
-import io.ssc.gilbert2.Examples
+import io.ssc.gilbert2.shell.local
+
 
 object Play {
   def main(args: Array[String]) = {
 
-    printPlan(Examples.cooccurrences)
+    val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    new CommonSubexpressionDetector().find(Examples.cooccurrences)
+    val xZero = ones(3) / scalar(math.sqrt(3))
+
+    val eigen = fixpoint(xZero, { x =>  (A * x) / norm2(A * x) })
+
+    local(eigen)
   }
 }

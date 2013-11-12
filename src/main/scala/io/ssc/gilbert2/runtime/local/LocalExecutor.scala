@@ -38,15 +38,14 @@ import scala.io.Source
 object LocalExecutorRunner {
 
   def main(args: Array[String]): Unit = {
-    val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv")
 
-    val B = A.binarize()
+    val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    val C = B.t * B
+    val x_0 = ones(3) / scalar(1 / math.sqrt(3))
 
-    val D = C / C.max()
+    val eigenvector = fixpoint(x_0, { x => (A * x) / norm2(A * x) })
 
-    local(D)
+    local(eigenvector)
   }
 }
 
@@ -62,6 +61,9 @@ class LocalExecutor extends Executor {
     execute(executable)
   }
 
+  //TODO fix this
+  var iterationState: Vector = null
+
   //TODO refactor
   protected def execute(executable: Executable): Any = {
 
@@ -72,23 +74,33 @@ class LocalExecutor extends Executor {
             { _ => },
             { (transformation, _) => {
 
-              //TODO nicer
-              var entries = Seq[(Int, Int, Double)]()
+              val matrix = new SparseRowMatrix(transformation.numRows, transformation.numColumns)
+
               for (line <- Source.fromFile(transformation.path).getLines()) {
                 val fields = line.split(" ")
-                entries = entries ++ Seq((fields(0).toInt, fields(1).toInt, fields(2).toDouble))
+                matrix.setQuick(fields(0).toInt, fields(1).toInt, fields(2).toDouble)
               }
-
-              val maxColumn = entries.map({ case (_, column, _) => column }).reduce(math.max)
-              val maxRow = entries.map({ case (row, _, _) => row }).reduce(math.max) 
-
-              val matrix = new SparseRowMatrix(maxRow + 1, maxColumn + 1)
-
-              entries.foreach({ case (row, column, value) => matrix.setQuick(row, column, value) })
 
               matrix
             }})
       }
+
+      case (transformation: FixpointIteration) => {
+
+        iterationState = handle[FixpointIteration, Vector](transformation,
+            { transformation => evaluate[Vector](transformation.initialState) },
+            { (_, initialVector) => initialVector }).asInstanceOf[Vector]
+
+        for (_ <- 1 to 100) {
+          iterationState = handle[FixpointIteration, Vector](transformation,
+            { transformation => evaluate[Vector](transformation.updatePlan) },
+            { (_, vector) => vector }).asInstanceOf[Vector]
+        }
+
+        iterationState
+      }
+
+      case (transformation: IterationStatePlaceholder) => { iterationState }
 
       case (transformation: CellwiseMatrixTransformation) => {
 
@@ -141,6 +153,15 @@ class LocalExecutor extends Executor {
             }})
       }
 
+      case (transformation: MatrixVectorMult) => {
+
+        handle[MatrixVectorMult, (SparseRowMatrix, Vector)](transformation,
+            { transformation => {
+              (evaluate[SparseRowMatrix](transformation.matrix), evaluate[Vector](transformation.vector))
+            }},
+            { case (_, (matrix, vector)) => matrix.times(vector) })
+      }
+
       case (transformation: MatrixToVectorTransformation) => {
 
         handle[MatrixToVectorTransformation, SparseRowMatrix](transformation,
@@ -169,7 +190,11 @@ class LocalExecutor extends Executor {
             { transformation => evaluate[Vector](transformation.vector) },
             { (transformation, vector) => {
               transformation.operation match {
-                case (VectorwiseOperation.Norm2Squared) => vector.norm(2)
+                case (VectorwiseOperation.Norm2Squared) => {
+                  val norm = vector.norm(2)
+                  norm * norm
+                }
+                case (VectorwiseOperation.Norm2) => vector.norm(2)
                 case (VectorwiseOperation.Max) => vector.maxValue()
                 case (VectorwiseOperation.Min) => vector.minValue()
                 case (VectorwiseOperation.Average) => vector.zSum() / vector.size()

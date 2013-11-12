@@ -27,9 +27,9 @@ trait Executor {
     executionOrder += 1
 
     /* check if this a common subexpression which we already processed */
-    if (redirects.contains(executionOrder)) {
-      return symbolTable(redirects(executionOrder))
-    }
+   // if (redirects.contains(executionOrder)) {
+    //   return symbolTable(redirects(executionOrder))
+    //}
 
     println(executionOrder + " " + executable)
 

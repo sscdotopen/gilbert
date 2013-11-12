@@ -53,6 +53,16 @@ class PlanPrinter {
         printIndented(depth, "LoadMatrix [" + op.path + "]")
       }
 
+      case (op: FixpointIteration) => {
+        printIndented(depth, "FixpointIteration")
+        print(op.initialState, depth + 1)
+        print(op.updatePlan, depth + 1)
+      }
+
+      case (op: IterationStatePlaceholder) => {
+        printIndented(depth, "IterationState")
+      }
+
       case (op: CellwiseMatrixTransformation) => {
         printIndented(depth, "CellwiseMatrixOp [" + op.operation + "]")
         print(op.matrix, depth + 1)
@@ -80,6 +90,12 @@ class PlanPrinter {
         print(op.scalar, depth + 1)
       }
 
+      case (op: MatrixVectorMult) => {
+        printIndented(depth, "MatrixVectorMult")
+        print(op.matrix, depth + 1)
+        print(op.vector, depth + 1)
+      }
+
       case (op: MatrixToVectorTransformation) => {
         printIndented(depth, "MatrixToVectorAggregationOp [" + op.operation + "]")
         print(op.matrix, depth + 1)
@@ -88,6 +104,7 @@ class PlanPrinter {
       case (op: ScalarVectorTransformation) => {
         printIndented(depth, "ScalarVectorOp [" + op.operation + "]")
         print(op.vector, depth + 1)
+        print(op.scalar, depth + 1)
       }
 
       case (op: VectorAggregationTransformation) => {

@@ -25,7 +25,7 @@ import io.ssc.gilbert2.ScalarOperation.ScalarOperation
 import io.ssc.gilbert2.MatrixwiseOperation.MatrixwiseOperation
 
 
-case class LoadMatrix(path: String) extends Matrix
+case class LoadMatrix(path: String, numRows: Int, numColumns: Int) extends Matrix
 
 case class ScalarMatrixTransformation(scalar: ScalarRef, matrix: Matrix, operation: ScalarsOperation)
     extends Matrix
@@ -42,6 +42,8 @@ case class CellwiseMatrixTransformation(matrix: Matrix, operation: ScalarOperati
 case class VectorwiseMatrixTransformation(matrix: Matrix, operation: VectorwiseOperation) extends Matrix
 
 case class WriteMatrix(matrix: Matrix) extends Matrix
+
+
 
 case class LoadVector(path: String) extends Vector
 
@@ -62,6 +64,14 @@ case class WriteVector(vector: Vector) extends Vector
 case class ones(size: Int) extends Vector
 
 case class rand(size: Int, mean: Double = 0, std: Double = 1) extends Vector
+
+case class FixpointIteration(initialState: Vector, updateFunction: Vector => Vector) extends Vector {
+  val updatePlan = updateFunction.apply(IterationStatePlaceholder())
+}
+
+case class IterationStatePlaceholder() extends Vector
+
+
 
 case class scalar(value: Double) extends ScalarRef
 
