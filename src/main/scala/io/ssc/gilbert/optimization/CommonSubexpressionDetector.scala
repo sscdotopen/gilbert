@@ -24,33 +24,34 @@ import io.ssc.gilbert.Executable
 class CommonSubexpressionDetector extends Walker {
 
   private var subtreesByHash = Map[Int, Seq[Int]]()
-  private var executionOrder = 0
 
   def find(executable: Executable) = {
     visit(executable)
 
-    var redirects = Map[Int,Int]()
+    var repeatedExpressions = Map[Int,Int]()
 
     for ((hash, orders) <- subtreesByHash) {
       if (orders.size > 1) {
         val minOrder = orders.reduce(math.min)
         val toEliminate = orders.filter(_ != minOrder)
 
-        toEliminate.map((_ -> minOrder)).foreach(redirects += _)
+        toEliminate.map((_ -> minOrder)).foreach(repeatedExpressions += _)
         //eliminatedExpressions.foreach(redirects += (_ -> minOrder))
       }
+
+      //TODO check object equality to handle hash collisions!
     }
 
-    redirects
+    repeatedExpressions
   }
 
   override def onLeave(transformation: Executable) = {
-    executionOrder += 1
+
     val hash = transformation.hashCode()
 
-    //println("\t" + executionOrder + " " + transformation)
+    //println("\t" + transformation.id + " " + transformation)
 
-    val orders = subtreesByHash.getOrElse(hash, Seq()) ++ Seq(executionOrder)
+    val orders = subtreesByHash.getOrElse(hash, Seq()) ++ Seq(transformation.id)
     subtreesByHash += (hash -> orders)
   }
 }

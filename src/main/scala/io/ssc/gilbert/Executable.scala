@@ -1,6 +1,19 @@
 package io.ssc.gilbert
 
-trait Executable {}
+import java.util.concurrent.atomic.AtomicInteger
+
+object IDGenerator {
+
+  val counter = new AtomicInteger(0)
+
+  def nextID() = counter.incrementAndGet()
+}
+
+
+trait Executable {
+  val id: Int = IDGenerator.nextID()
+}
+
 
 trait Executor {
 

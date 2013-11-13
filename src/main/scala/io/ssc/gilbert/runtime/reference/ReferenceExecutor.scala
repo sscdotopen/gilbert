@@ -56,6 +56,8 @@ class ReferenceExecutor extends Executor {
 
     setRedirects(new CommonSubexpressionDetector().find(executable))
 
+    //print(new CommonSubexpressionDetector().find(executable))
+
     printPlan(executable)
 
     execute(executable)

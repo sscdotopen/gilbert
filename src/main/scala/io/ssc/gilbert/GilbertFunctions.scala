@@ -29,7 +29,7 @@ object fixpoint {
 }
 
 
-object bin {
+object binarize {
   def apply(matrix: Matrix) = matrix.binarize()
 }
 

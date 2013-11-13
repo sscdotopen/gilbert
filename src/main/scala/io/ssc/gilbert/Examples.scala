@@ -24,7 +24,7 @@ object Examples {
 
     val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    val B = bin(A)
+    val B = binarize(A)
     val C = B.t * B
 
     val D = C / C.max()
