@@ -16,13 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2.shell
+package io.ssc.gilbert.shell
 
-import io.ssc.gilbert2._
-import io.ssc.gilbert2.runtime.local.{LocalExecutorRunner, LocalExecutor}
-import io.ssc.gilbert2.runtime.spark.SparkExecutor
-import io.ssc.gilbert2.WriteMatrix
-import io.ssc.gilbert2.WriteScalarRef
+import io.ssc.gilbert._
+import io.ssc.gilbert.runtime.reference.{ReferenceExecutorRunner, ReferenceExecutor}
+import io.ssc.gilbert.runtime.spark.SparkExecutor
+import io.ssc.gilbert.WriteMatrix
+import io.ssc.gilbert.WriteScalarRef
 
 object local {
   def apply(executable: Executable) = {
@@ -33,7 +33,7 @@ object local {
       case (scalar: ScalarRef) => WriteScalarRef(scalar)
     }
 
-    new LocalExecutor().run(write)
+    new ReferenceExecutor().run(write)
   }
  }
 

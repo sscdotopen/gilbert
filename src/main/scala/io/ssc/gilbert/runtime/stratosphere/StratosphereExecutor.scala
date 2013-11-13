@@ -1,6 +1,6 @@
-package io.ssc.gilbert2.runtime.stratosphere
+package io.ssc.gilbert.runtime.stratosphere
 
-//import io.ssc.gilbert2.{WriteMatrix, LoadMatrix, Executable}
+//import io.ssc.gilbert.{WriteMatrix, LoadMatrix, Executable}
 //import eu.stratosphere.scala.{ScalaPlan, DataStream, TextFile}
 //import eu.stratosphere.scala.operators.DelimitedDataSinkFormat
 //import eu.stratosphere.pact.client.LocalExecutor

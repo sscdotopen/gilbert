@@ -16,9 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2
-
-import io.ssc.gilbert2.GilbertImplicits._
+package io.ssc.gilbert
 
 object Examples {
 
@@ -38,10 +36,10 @@ object Examples {
 
     val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    val initialRanks = ones(3) / scalar(3)
+    val initialRanks = ones(3) / 3
     val e = ones(3)
 
-    fixpoint(initialRanks, { p => scalar(0.85) * A * p + scalar(0.15) * e })
+    fixpoint(initialRanks, { p => 0.85 * A * p + 0.15 * e })
   }
 
   def linearRegression = {

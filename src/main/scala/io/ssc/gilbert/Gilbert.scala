@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2
+package io.ssc.gilbert
 
 abstract class Matrix extends Executable {
 
@@ -41,6 +41,8 @@ abstract class Matrix extends Executable {
   def /(scalar: ScalarRef) = div(scalar)
 
   def rowSum() = { MatrixToVectorTransformation(this, MatrixwiseOperation.RowSums) }
+
+  def normalizeRowsL1() = { VectorwiseMatrixTransformation(this, VectorwiseOperation.NormalizeL1) }
 }
 
 abstract class Vector extends Executable {

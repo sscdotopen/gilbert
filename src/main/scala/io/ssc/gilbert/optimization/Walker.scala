@@ -16,22 +16,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2.optimization
+package io.ssc.gilbert.optimization
 
-import io.ssc.gilbert2._
-import io.ssc.gilbert2.WriteVector
-import io.ssc.gilbert2.MatrixMult
-import io.ssc.gilbert2.WriteMatrix
-import io.ssc.gilbert2.Transpose
-import io.ssc.gilbert2.ones
-import io.ssc.gilbert2.ScalarVectorTransformation
-import io.ssc.gilbert2.CellwiseMatrixTransformation
-import io.ssc.gilbert2.rand
-import io.ssc.gilbert2.LoadMatrix
-import io.ssc.gilbert2.AggregateMatrixTransformation
-import io.ssc.gilbert2.scalar
-import io.ssc.gilbert2.ScalarMatrixTransformation
-import io.ssc.gilbert2.MatrixToVectorTransformation
+import io.ssc.gilbert._
+import io.ssc.gilbert.WriteVector
+import io.ssc.gilbert.MatrixMult
+import io.ssc.gilbert.WriteMatrix
+import io.ssc.gilbert.Transpose
+import io.ssc.gilbert.ones
+import io.ssc.gilbert.ScalarVectorTransformation
+import io.ssc.gilbert.CellwiseMatrixTransformation
+import io.ssc.gilbert.rand
+import io.ssc.gilbert.LoadMatrix
+import io.ssc.gilbert.AggregateMatrixTransformation
+import io.ssc.gilbert.scalar
+import io.ssc.gilbert.ScalarMatrixTransformation
+import io.ssc.gilbert.MatrixToVectorTransformation
 
 abstract class Walker {
 
@@ -91,6 +91,12 @@ abstract class Walker {
         onLeave(transformation)
       }
 
+      case (transformation: VectorwiseMatrixTransformation) => {
+        onArrival(transformation)
+        visit(transformation.matrix)
+        onLeave(transformation)
+      }
+
       case (transformation: MatrixVectorMult) => {
         onArrival(transformation)
         visit(transformation.matrix)
@@ -114,6 +120,13 @@ abstract class Walker {
       case (transformation: VectorAggregationTransformation) => {
         onArrival(transformation)
         visit(transformation.vector)
+        onLeave(transformation)
+      }
+
+      case (transformation: CellwiseVectorTransformation) => {
+        onArrival(transformation)
+        visit(transformation.left)
+        visit(transformation.right)
         onLeave(transformation)
       }
 

@@ -16,9 +16,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2.optimization
+package io.ssc.gilbert.optimization
 
-import io.ssc.gilbert2.Executable
+import io.ssc.gilbert.Executable
 
 
 class CommonSubexpressionDetector extends Walker {

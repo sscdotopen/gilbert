@@ -1,4 +1,4 @@
-package io.ssc.gilbert2
+package io.ssc.gilbert
 
 trait Executable {}
 

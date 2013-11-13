@@ -16,26 +16,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2.runtime.local
+package io.ssc.gilbert.runtime.reference
 
-import io.ssc.gilbert2._
-import org.apache.mahout.math.{DenseVector, Vector, SparseRowMatrix}
+import io.ssc.gilbert._
+import org.apache.mahout.math.{DenseVector2, Vector, SparseRowMatrix}
 import org.apache.mahout.math.function.Functions
-import io.ssc.gilbert2.runtime.VectorFunctions
-import io.ssc.gilbert2.AggregateMatrixTransformation
-import io.ssc.gilbert2.MatrixMult
-import io.ssc.gilbert2.CellwiseMatrixTransformation
-import io.ssc.gilbert2.WriteMatrix
-import io.ssc.gilbert2.Transpose
-import io.ssc.gilbert2.LoadMatrix
-import io.ssc.gilbert2.ScalarMatrixTransformation
+import io.ssc.gilbert.runtime.VectorFunctions
+import io.ssc.gilbert.AggregateMatrixTransformation
+import io.ssc.gilbert.MatrixMult
+import io.ssc.gilbert.CellwiseMatrixTransformation
+import io.ssc.gilbert.WriteMatrix
+import io.ssc.gilbert.Transpose
+import io.ssc.gilbert.LoadMatrix
+import io.ssc.gilbert.ScalarMatrixTransformation
 import org.apache.mahout.math.random.Normal
-import io.ssc.gilbert2.optimization.CommonSubexpressionDetector
-import io.ssc.gilbert2.shell.{local, printPlan}
+import io.ssc.gilbert.optimization.CommonSubexpressionDetector
+import io.ssc.gilbert.shell.{local, printPlan}
 
 import scala.io.Source
 
-object LocalExecutorRunner {
+object ReferenceExecutorRunner {
 
   def main(args: Array[String]): Unit = {
 
@@ -49,7 +49,7 @@ object LocalExecutorRunner {
   }
 }
 
-class LocalExecutor extends Executor {
+class ReferenceExecutor extends Executor {
 
 
   def run(executable: Executable) = {
@@ -78,7 +78,7 @@ class LocalExecutor extends Executor {
 
               for (line <- Source.fromFile(transformation.path).getLines()) {
                 val fields = line.split(" ")
-                matrix.setQuick(fields(0).toInt, fields(1).toInt, fields(2).toDouble)
+                matrix.setQuick(fields(0).toInt - 1, fields(1).toInt - 1, fields(2).toDouble)
               }
 
               matrix
@@ -91,7 +91,7 @@ class LocalExecutor extends Executor {
             { transformation => evaluate[Vector](transformation.initialState) },
             { (_, initialVector) => initialVector }).asInstanceOf[Vector]
 
-        for (_ <- 1 to 100) {
+        for (_ <- 1 to 10) {
           iterationState = handle[FixpointIteration, Vector](transformation,
             { transformation => evaluate[Vector](transformation.updatePlan) },
             { (_, vector) => vector }).asInstanceOf[Vector]
@@ -149,6 +149,7 @@ class LocalExecutor extends Executor {
             { case (transformation, (matrix, scalar)) => {
               transformation.operation match {
                 case (ScalarsOperation.Division) => { matrix.divide(scalar) }
+                case (ScalarsOperation.Multiplication) => { matrix.times(scalar) }
               }
             }})
       }
@@ -160,6 +161,23 @@ class LocalExecutor extends Executor {
               (evaluate[SparseRowMatrix](transformation.matrix), evaluate[Vector](transformation.vector))
             }},
             { case (_, (matrix, vector)) => matrix.times(vector) })
+      }
+
+      case (transformation: VectorwiseMatrixTransformation) => {
+
+        handle[VectorwiseMatrixTransformation, SparseRowMatrix](transformation,
+            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
+            { (transformation, matrix) => {
+              transformation.operation match {
+                case (VectorwiseOperation.NormalizeL1) => {
+                  for (index <- 0 until matrix.numRows()) {
+                    matrix.viewRow(index).normalize(1)
+                  }
+                }
+                matrix
+              }
+
+            }})
       }
 
       case (transformation: MatrixToVectorTransformation) => {
@@ -180,6 +198,7 @@ class LocalExecutor extends Executor {
             { case (transformation, (vector, scalar)) => {
               transformation.operation match {
                 case (ScalarsOperation.Division) => { vector.assign(Functions.DIV, scalar) }
+                case (ScalarsOperation.Multiplication) => { vector.assign(Functions.MULT, scalar) }
               }
             }})
       }
@@ -202,11 +221,21 @@ class LocalExecutor extends Executor {
             }})
       }
 
+      case (transformation: CellwiseVectorTransformation) => {
+        handle[CellwiseVectorTransformation, (Vector, Vector)](transformation,
+            { transformation => (evaluate[Vector](transformation.left), evaluate[Vector](transformation.right)) },
+            { case (transformation, (left, right)) => {
+              transformation.operation match {
+                case (CellwiseOperation.Addition) => { left.assign(right, Functions.PLUS) }
+              }
+            }})
+      }
+
       case (transformation: ones) => {
 
         handle[ones, Unit](transformation,
             { _ => },
-            { (transformation, _) => new DenseVector(transformation.size).assign(1) })
+            { (transformation, _) => new DenseVector2(transformation.size).assign(1) })
       }
 
       case (transformation: rand) => {
@@ -214,7 +243,7 @@ class LocalExecutor extends Executor {
         handle[rand, Unit](transformation,
             { _ => },
             { (transformation, _) => {
-              new DenseVector(transformation.size).assign(new Normal(transformation.mean, transformation.std))
+              new DenseVector2(transformation.size).assign(new Normal(transformation.mean, transformation.std))
             }})
       }
 

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2.runtime
+package io.ssc.gilbert.runtime
 
 import org.apache.mahout.math.function.{DoubleDoubleFunction, VectorFunction, DoubleFunction}
 import org.apache.mahout.math.Vector

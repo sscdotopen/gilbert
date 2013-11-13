@@ -16,39 +16,52 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2.runtime.spark
+package io.ssc.gilbert.runtime.spark
 
-import org.apache.mahout.math.{DenseVector, RandomAccessSparseVector, SequentialAccessSparseVector, Vector}
+import org.apache.mahout.math.{SequentialAccessSparseVector2, DenseVector2, RandomAccessSparseVector, Vector}
 
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
 import org.apache.spark.rdd.RDD
-import io.ssc.gilbert2.runtime.VectorFunctions
+import io.ssc.gilbert.runtime.VectorFunctions
 import scala.collection.JavaConversions._
-import io.ssc.gilbert2._
+import io.ssc.gilbert._
 
 import org.apache.mahout.math.function.Functions
 import org.apache.mahout.math.random.Normal
-import io.ssc.gilbert2.optimization.CommonSubexpressionDetector
-import io.ssc.gilbert2.shell.{printPlan, withSpark}
+import io.ssc.gilbert.optimization.CommonSubexpressionDetector
+import io.ssc.gilbert.shell.{printPlan, withSpark}
+import org.apache.spark.serializer.{KryoSerializer, KryoRegistrator}
+import com.esotericsoftware.kryo.Kryo
+import scala.math
 
 object SparkExecutorRunner {
+
+  def eigen(A: Matrix) = fixpoint(rand(3), { b => (A * b) / norm2(A * b) })
 
   def main(args: Array[String]): Unit = {
     val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    val xZero = ones(3) / scalar(math.sqrt(3))
-
-    val eigen = fixpoint(xZero, { x =>  (A * x) / norm2(A * x) })
-
-    withSpark(eigen)
+    withSpark(eigen(A))
   }
 }
+
+class GilbertRegistrator extends KryoRegistrator {
+  override def registerClasses(kryo: Kryo) {
+    kryo.register(classOf[DenseVector2])
+    kryo.register(classOf[SequentialAccessSparseVector2])
+  }
+}
+
+
 
 class SparkExecutor extends Executor {
   
   type RowPartitionedMatrix = RDD[(Int, Vector)]
+
+  System.setProperty("spark.serializer", classOf[KryoSerializer].getName)
+  System.setProperty("spark.kryo.registrator", classOf[GilbertRegistrator].getName)
 
   val sc = new SparkContext("local", "Gilbert")
   val degreeOfParallelism = 2
@@ -81,7 +94,7 @@ class SparkExecutor extends Executor {
                 for ((_, column, value) <- elements) {
                   vector.setQuick(column, value)
                 }
-                Seq((index, new SequentialAccessSparseVector(vector)))
+                Seq((index, new SequentialAccessSparseVector2(vector)))
               }})
             }})
       }
@@ -144,7 +157,7 @@ class SparkExecutor extends Executor {
                 .groupBy(_._1).map({ case (index, entries) => {
                 val row = new RandomAccessSparseVector(Integer.MAX_VALUE)
                 entries.foreach({ case (_, columnIndex, value) => row.setQuick(columnIndex, value) })
-                (index, new SequentialAccessSparseVector(row))
+                (index, new SequentialAccessSparseVector2(row))
               }})
             }})
       }
@@ -169,7 +182,7 @@ class SparkExecutor extends Executor {
                 .groupBy(_._1).map({ case (index, entries) => {
                   val row = new RandomAccessSparseVector(Integer.MAX_VALUE)
                   entries.foreach({ case (_, columnIndex, value) => row.setQuick(columnIndex, value) })
-                  (index, new SequentialAccessSparseVector(row))
+                  (index, new SequentialAccessSparseVector2(row))
                 }})
 
               transposedLeftMatrix.join(rightMatrix).flatMap({ case (_, (column, row)) => {
@@ -202,12 +215,12 @@ class SparkExecutor extends Executor {
         { transformation => (evaluate[RowPartitionedMatrix](transformation.matrix), evaluate[Vector](transformation.vector)) },
         { case (_, (matrix, vector)) => {
 
-          val wrappedVector = KryoSerializationWrapper(vector)
-          sc.broadcast(wrappedVector)
+          //val wrappedVector = KryoSerializationWrapper(vector)
+          //sc.broadcast(wrappedVector)
           sc.broadcast(vector)
 
           val result = matrix.map({ case (index, row) => {
-            val vector = wrappedVector.value
+            //val vector = wrappedVector.value
             (index, row.dot(vector))
           }})
 
@@ -231,7 +244,7 @@ class SparkExecutor extends Executor {
 
         handle[ones, Unit](transformation,
             { _ => },
-            { (transformation, _) => new DenseVector(transformation.size).assign(1) })
+            { (transformation, _) => new DenseVector2(transformation.size).assign(1) })
       }
 
       case (transformation: rand) => {
@@ -239,7 +252,7 @@ class SparkExecutor extends Executor {
         handle[rand, Unit](transformation,
             { _ => },
             { (transformation, _) => {
-              new DenseVector(transformation.size).assign(new Normal(transformation.mean, transformation.std))
+              new DenseVector2(transformation.size).assign(new Normal(transformation.mean, transformation.std))
             }})
       }
 
@@ -318,7 +331,7 @@ class SparkExecutor extends Executor {
     for ((row, sum) <- values.toArray()) {
       vector.setQuick(row, sum)
     }
-    new SequentialAccessSparseVector(vector)
+    new SequentialAccessSparseVector2(vector)
   }
 
 }

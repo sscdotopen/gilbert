@@ -16,29 +16,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert2
+package io.ssc.gilbert
 
-object ScalarOperation extends Enumeration {
-  type ScalarOperation = Value
-  val Binarize = Value
+object load {
+  def apply(path: String, numRows: Int, numColumns: Int) = LoadMatrix(path, numRows, numColumns)
 }
 
-object ScalarsOperation extends Enumeration {
-  type ScalarsOperation = Value
-  val Addition, Subtraction, Multiplication, Division, Maximum = Value
+object fixpoint {
+  def apply(initialState: Vector, updateFunction: Vector => Vector) = {
+    new FixpointIteration(initialState, updateFunction)
+  }
 }
 
-object CellwiseOperation extends Enumeration {
-  type CellwiseOperation = Value
-  val Addition, Subtraction, Multiplication, Division = Value
+
+object bin {
+  def apply(matrix: Matrix) = matrix.binarize()
 }
 
-object VectorwiseOperation extends Enumeration {
-  type VectorwiseOperation = Value
-  val Max, Min, Average, Norm2Squared, Norm2 = Value
+object max {
+  def apply(matrix: Matrix) = matrix.max()
+  def apply(vector: Vector) = vector.max()
 }
 
-object MatrixwiseOperation extends Enumeration {
-  type MatrixwiseOperation = Value
-  val RowSums = Value
+object min {
+  def apply(vector: Vector) = vector.min()
+}
+
+object avg {
+  def apply(vector: Vector) = vector.avg()
+}
+
+object rowSum {
+  def apply(matrix: Matrix) = matrix.rowSum()
+}
+
+object norm2Squared {
+  def apply(vector: Vector) = vector.norm2Squared
+}
+
+object norm2 {
+  def apply(vector: Vector) = vector.norm2
 }
