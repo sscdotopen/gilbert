@@ -20,7 +20,7 @@ package io.ssc.gilbert.optimization
 
 import io.ssc.gilbert.Executable
 
-
+//TODO needs to handle iteration state!
 class CommonSubexpressionDetector extends Walker {
 
   private var subtreesByHash = Map[Int, Seq[Int]]()
@@ -36,7 +36,7 @@ class CommonSubexpressionDetector extends Walker {
         val toEliminate = orders.filter(_ != minOrder)
 
         toEliminate.map((_ -> minOrder)).foreach(repeatedExpressions += _)
-        //eliminatedExpressions.foreach(redirects += (_ -> minOrder))
+        //eliminatedExpressions.foreach(repeatedExpressions += (_ -> minOrder))
       }
 
       //TODO check object equality to handle hash collisions!
@@ -49,7 +49,7 @@ class CommonSubexpressionDetector extends Walker {
 
     val hash = transformation.hashCode()
 
-    //println("\t" + transformation.id + " " + transformation)
+    println("\t" + transformation.id + ", " + currentIteration() + " " + transformation)
 
     val orders = subtreesByHash.getOrElse(hash, Seq()) ++ Seq(transformation.id)
     subtreesByHash += (hash -> orders)

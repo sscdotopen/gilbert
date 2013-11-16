@@ -18,50 +18,42 @@
 
 package io.ssc.gilbert.runtime.spark
 
-import org.apache.mahout.math.{SequentialAccessSparseVector2, DenseVector2, RandomAccessSparseVector, Vector}
+import scala.collection.JavaConversions._
+
+import org.apache.mahout.math.{SequentialAccessSparseVector, DenseVector, RandomAccessSparseVector, Vector}
 
 import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
 import org.apache.spark.rdd.RDD
 import io.ssc.gilbert.runtime.VectorFunctions
-import scala.collection.JavaConversions._
 import io.ssc.gilbert._
 
 import org.apache.mahout.math.function.Functions
 import org.apache.mahout.math.random.Normal
 import io.ssc.gilbert.optimization.CommonSubexpressionDetector
 import io.ssc.gilbert.shell.{printPlan, withSpark}
-import org.apache.spark.serializer.{KryoSerializer, KryoRegistrator}
-import com.esotericsoftware.kryo.Kryo
-import scala.math
+import org.apache.spark.serializer.KryoSerializer
 
 object SparkExecutorRunner {
 
-  def eigen(A: Matrix) = fixpoint(rand(3), { b => (A * b) / norm2(A * b) })
+  //def eigen(A: Matrix) = fixpoint(rand(3), { b => (A * b) / norm2(A * b) })
 
   def main(args: Array[String]): Unit = {
     val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    withSpark(eigen(A))
+    val b = ones(3, 1) / math.sqrt(3)
+
+    withSpark(norm2(A * b))
   }
 }
-
-class GilbertRegistrator extends KryoRegistrator {
-  override def registerClasses(kryo: Kryo) {
-    kryo.register(classOf[DenseVector2])
-    kryo.register(classOf[SequentialAccessSparseVector2])
-  }
-}
-
-
 
 class SparkExecutor extends Executor {
-  
+
   type RowPartitionedMatrix = RDD[(Int, Vector)]
 
   System.setProperty("spark.serializer", classOf[KryoSerializer].getName)
-  System.setProperty("spark.kryo.registrator", classOf[GilbertRegistrator].getName)
+  System.setProperty("spark.kryo.registrator", classOf[MahoutKryoRegistrator].getName)
 
   val sc = new SparkContext("local", "Gilbert")
   val degreeOfParallelism = 2
@@ -94,7 +86,7 @@ class SparkExecutor extends Executor {
                 for ((_, column, value) <- elements) {
                   vector.setQuick(column, value)
                 }
-                Seq((index, new SequentialAccessSparseVector2(vector)))
+                Seq((index, new SequentialAccessSparseVector(vector)))
               }})
             }})
       }
@@ -138,7 +130,12 @@ class SparkExecutor extends Executor {
             { (transformation, matrix) => {
               transformation.operation match {
                 case ScalarsOperation.Maximum => {
-                  matrix.map({ case (index, row) => row.maxValue() }).aggregate(Double.MinValue)(math.max, math.max)
+                  matrix.map({ case (_, row) => row.maxValue() }).aggregate(Double.MinValue)(math.max, math.max)
+                }
+                case ScalarsOperation.Norm2 => {
+                  val sumOfEntriesSquared =
+                    matrix.map({ case (_, row) => row.getLengthSquared() }).aggregate(0.0)({ _ + _ }, { _ + _ })
+                  math.sqrt(sumOfEntriesSquared)
                 }
               }
             }})
@@ -152,12 +149,12 @@ class SparkExecutor extends Executor {
               //TODO make reduce combinable
               matrix.flatMap({ case (index, row) => {
                 for (elem <- row.nonZeroes())
-                yield { (elem.index(), index, elem.get()) }
+                  yield { (elem.index(), index, elem.get()) }
               }})
                 .groupBy(_._1).map({ case (index, entries) => {
                 val row = new RandomAccessSparseVector(Integer.MAX_VALUE)
                 entries.foreach({ case (_, columnIndex, value) => row.setQuick(columnIndex, value) })
-                (index, new SequentialAccessSparseVector2(row))
+                (index, new SequentialAccessSparseVector(row))
               }})
             }})
       }
@@ -182,7 +179,7 @@ class SparkExecutor extends Executor {
                 .groupBy(_._1).map({ case (index, entries) => {
                   val row = new RandomAccessSparseVector(Integer.MAX_VALUE)
                   entries.foreach({ case (_, columnIndex, value) => row.setQuick(columnIndex, value) })
-                  (index, new SequentialAccessSparseVector2(row))
+                  (index, new SequentialAccessSparseVector(row))
                 }})
 
               transposedLeftMatrix.join(rightMatrix).flatMap({ case (_, (column, row)) => {
@@ -209,83 +206,35 @@ class SparkExecutor extends Executor {
           }})
       }
 
-      case (transformation: MatrixVectorMult) => {
-
-        handle[MatrixVectorMult, (RowPartitionedMatrix, Vector)](transformation,
-        { transformation => (evaluate[RowPartitionedMatrix](transformation.matrix), evaluate[Vector](transformation.vector)) },
-        { case (_, (matrix, vector)) => {
-
-          //val wrappedVector = KryoSerializationWrapper(vector)
-          //sc.broadcast(wrappedVector)
-          sc.broadcast(vector)
-
-          val result = matrix.map({ case (index, row) => {
-            //val vector = wrappedVector.value
-            (index, row.dot(vector))
-          }})
-
-          toVector(result)
-        }})
-      }
-
-      case (transformation: ScalarVectorTransformation) => {
-
-        handle[ScalarVectorTransformation, (Vector, Double)](transformation,
-        { transformation => (evaluate[Vector](transformation.vector), evaluate[Double](transformation.scalar)) },
-        { case (transformation, (vector, scalar)) => {
-          transformation.operation match {
-            case (ScalarsOperation.Division) => { vector.assign(Functions.DIV, scalar) }
-          }
-        }})
-      }
-
-
+      //TODO rework
       case (transformation: ones) => {
 
         handle[ones, Unit](transformation,
             { _ => },
-            { (transformation, _) => new DenseVector2(transformation.size).assign(1) })
+            { (transformation, _) => {
+              var rows = Seq[(Int, Vector)]()
+
+              for (index <- 1 to transformation.rows) {
+                rows = rows ++ Seq((index, new DenseVector(transformation.columns).assign(1)))
+              }
+              sc.parallelize(rows, degreeOfParallelism)
+            }})
       }
 
+      //TODO rework
       case (transformation: rand) => {
 
         handle[rand, Unit](transformation,
             { _ => },
             { (transformation, _) => {
-              new DenseVector2(transformation.size).assign(new Normal(transformation.mean, transformation.std))
-            }})
-      }
 
-      case (transformation: VectorAggregationTransformation) => {
+              val gaussian = new Normal(transformation.mean, transformation.std)
+              var rows = Seq[(Int, Vector)]()
 
-        handle[VectorAggregationTransformation, Vector](transformation,
-        { transformation => evaluate[Vector](transformation.vector) },
-        { (transformation, vector) => {
-          transformation.operation match {
-            case (VectorwiseOperation.Norm2Squared) => {
-              val norm = vector.norm(2)
-              norm * norm
-            }
-            case (VectorwiseOperation.Norm2) => vector.norm(2)
-            case (VectorwiseOperation.Max) => vector.maxValue()
-            case (VectorwiseOperation.Min) => vector.minValue()
-            case (VectorwiseOperation.Average) => vector.zSum() / vector.size()
-          }
-        }})
-      }
-
-      //TODO we need a better way to do this, then copying to an array on the driver
-      case (transformation: MatrixToVectorTransformation) => {
-
-        handle[MatrixToVectorTransformation, RowPartitionedMatrix](transformation,
-            { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
-            { (transformation, matrix) => {
-              transformation.operation match {
-                case (MatrixwiseOperation.RowSums) => {
-                  val sums = matrix.map({ case (index, row) => (index, row.zSum()) })
-                  toVector(sums)
-                }
+              for (index <- 1 to transformation.rows) {
+                rows = rows ++ Seq((index, new DenseVector(transformation.columns).assign(gaussian)))
               }
+              sc.parallelize(rows, degreeOfParallelism)
             }})
       }
 
@@ -298,13 +247,6 @@ class SparkExecutor extends Executor {
                 println(index + " " + row)
               })
             }})
-      }
-
-      case (transformation: WriteVector) => {
-
-        handle[WriteVector, Vector](transformation,
-            { transformation => evaluate[Vector](transformation.vector) },
-            { (_, vector) => println(vector) })
       }
 
       case (transformation: scalar) => {
@@ -331,7 +273,7 @@ class SparkExecutor extends Executor {
     for ((row, sum) <- values.toArray()) {
       vector.setQuick(row, sum)
     }
-    new SequentialAccessSparseVector2(vector)
+    new SequentialAccessSparseVector(vector)
   }
 
 }

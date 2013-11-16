@@ -23,7 +23,7 @@ object load {
 }
 
 object fixpoint {
-  def apply(initialState: Vector, updateFunction: Vector => Vector) = {
+  def apply(initialState: Matrix, updateFunction: Matrix => Matrix) = {
     new FixpointIteration(initialState, updateFunction)
   }
 }
@@ -35,25 +35,9 @@ object binarize {
 
 object max {
   def apply(matrix: Matrix) = matrix.max()
-  def apply(vector: Vector) = vector.max()
-}
-
-object min {
-  def apply(vector: Vector) = vector.min()
-}
-
-object avg {
-  def apply(vector: Vector) = vector.avg()
-}
-
-object rowSum {
-  def apply(matrix: Matrix) = matrix.rowSum()
-}
-
-object norm2Squared {
-  def apply(vector: Vector) = vector.norm2Squared
 }
 
 object norm2 {
-  def apply(vector: Vector) = vector.norm2
+  def apply(matrix: Matrix) = matrix.norm(2);
 }
+

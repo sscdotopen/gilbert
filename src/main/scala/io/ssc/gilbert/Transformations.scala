@@ -22,7 +22,6 @@ import io.ssc.gilbert.ScalarsOperation._
 import io.ssc.gilbert.CellwiseOperation._
 import io.ssc.gilbert.VectorwiseOperation._
 import io.ssc.gilbert.ScalarOperation.ScalarOperation
-import io.ssc.gilbert.MatrixwiseOperation.MatrixwiseOperation
 
 
 case class LoadMatrix(path: String, numRows: Int, numColumns: Int) extends Matrix
@@ -43,41 +42,19 @@ case class VectorwiseMatrixTransformation(matrix: Matrix, operation: VectorwiseO
 
 case class WriteMatrix(matrix: Matrix) extends Matrix
 
+case class ones(rows: Int, columns: Int) extends Matrix
 
+case class rand(rows: Int, columns: Int, mean: Double = 0, std: Double = 1) extends Matrix
 
-case class LoadVector(path: String) extends Vector
-
-case class ScalarVectorTransformation(scalar: ScalarRef, vector: Vector, operation: ScalarsOperation) 
-    extends Vector
-
-case class MatrixVectorMult(matrix: Matrix, vector: Vector) 
-    extends Vector
-
-case class CellwiseVectorTransformation(left: Vector, right: Vector, operation: CellwiseOperation)
-    extends Vector
-
-case class MatrixToVectorTransformation(matrix: Matrix, operation: MatrixwiseOperation)
-    extends Vector
-
-case class WriteVector(vector: Vector) extends Vector
-
-case class ones(size: Int) extends Vector
-
-case class rand(size: Int, mean: Double = 0, std: Double = 1) extends Vector
-
-case class FixpointIteration(initialState: Vector, updateFunction: Vector => Vector) extends Vector {
+case class FixpointIteration(initialState: Matrix, updateFunction: Matrix => Matrix) extends Matrix {
   val updatePlan = updateFunction.apply(IterationStatePlaceholder())
 }
 
-case class IterationStatePlaceholder() extends Vector
+case class IterationStatePlaceholder() extends Matrix
 
 
 
 case class scalar(value: Double) extends ScalarRef
-
-case class VectorAggregationTransformation(vector: Vector, operation: VectorwiseOperation) extends ScalarRef
-
-case class DotProductTransformation(left: Vector, right: Vector) extends ScalarRef
 
 case class AggregateMatrixTransformation(matrix: Matrix, operation: ScalarsOperation) extends ScalarRef
 

@@ -17,12 +17,11 @@ trait Executable {
 
 trait Executor {
 
-  private var executionOrder: Int = 0
   private var symbolTable = Map[Int, Any]()
-  private var redirects = Map[Int, Int]()
+  private var repeatedExpressions = Map[Int, Int]()
 
-  def setRedirects(redirects: Map[Int, Int]) = {
-    this.redirects = redirects
+  def setRedirects(repeatedExpressions: Map[Int, Int]) = {
+    this.repeatedExpressions = repeatedExpressions
   }
 
   def run(executable: Executable): Any
@@ -37,18 +36,28 @@ trait Executor {
 
     val input = retrieveInput(executable)
 
-    executionOrder += 1
 
-    /* check if this a common subexpression which we already processed */
-   // if (redirects.contains(executionOrder)) {
-    //   return symbolTable(redirects(executionOrder))
-    //}
+    if (executable.getClass != classOf[FixpointIteration]) {
 
-    println(executionOrder + " " + executable)
+      /* check if we already processed this expression */
+      if (symbolTable.contains(executable.id)) {
+        println("\t reusing (" + executable.id + ")")
+        return symbolTable(executable.id)
+      }
+
+      /* check if this a common subexpression which we already processed */
+      if (repeatedExpressions.contains(executable.id)) {
+        println("\t reusing (" + executable.id + ") (repeated subexpression)")
+        return symbolTable(repeatedExpressions(executable.id))
+      }
+
+    }
+
+    println("\t executing (" + executable.id + ") " + executable)
 
     val output = handle(executable, input)
 
-    symbolTable += (executionOrder -> output)
+    symbolTable += (executable.id -> output)
 
     output
   }

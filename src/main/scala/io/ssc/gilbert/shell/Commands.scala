@@ -20,6 +20,7 @@ package io.ssc.gilbert.shell
 
 import io.ssc.gilbert._
 import io.ssc.gilbert.runtime.reference.{ReferenceExecutorRunner, ReferenceExecutor}
+
 import io.ssc.gilbert.runtime.spark.SparkExecutor
 import io.ssc.gilbert.WriteMatrix
 import io.ssc.gilbert.WriteScalarRef
@@ -29,7 +30,6 @@ object local {
 
     val write = executable match {
       case (matrix: Matrix) => WriteMatrix(matrix)
-      case (vector: Vector) => WriteVector(vector)
       case (scalar: ScalarRef) => WriteScalarRef(scalar)
     }
 
@@ -42,7 +42,7 @@ object withSpark {
 
     val write = executable match {
       case (matrix: Matrix) => WriteMatrix(matrix)
-      case (vector: Vector) => WriteVector(vector)
+      //case (vector: Vector) => WriteVector(vector)
       case (scalar: ScalarRef) => WriteScalarRef(scalar)
     }
 

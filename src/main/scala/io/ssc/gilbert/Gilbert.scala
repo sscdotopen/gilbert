@@ -24,7 +24,6 @@ abstract class Matrix extends Executable {
 
   def times(other: Matrix) = { MatrixMult(this, other) }
   def times(scalar: ScalarRef) = { ScalarMatrixTransformation(scalar, this, ScalarsOperation.Multiplication) }
-  def times(vector: Vector) = { MatrixVectorMult(this, vector) }
 
   def div(scalar: ScalarRef) = { ScalarMatrixTransformation(scalar, this, ScalarsOperation.Division) }
   def plus(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Addition) }
@@ -32,44 +31,34 @@ abstract class Matrix extends Executable {
   def binarize() = { CellwiseMatrixTransformation(this, ScalarOperation.Binarize) }
 
   def max() = { AggregateMatrixTransformation(this, ScalarsOperation.Maximum) }
+  def norm(p: Int) = {
+    p match {
+      case 2 => AggregateMatrixTransformation(this, ScalarsOperation.Norm2)
+    }
+  }
 
   def t() = transpose
   def *(other: Matrix) = times(other)
   def *(scalar: ScalarRef) = times(scalar)
-  def *(vector: Vector) = times(vector)
+  def +(other: Matrix) = plus(other)
 
   def /(scalar: ScalarRef) = div(scalar)
 
-  def rowSum() = { MatrixToVectorTransformation(this, MatrixwiseOperation.RowSums) }
-
-  def normalizeRowsL1() = { VectorwiseMatrixTransformation(this, VectorwiseOperation.NormalizeL1) }
-}
-
-abstract class Vector extends Executable {
-
-  def plus(other: Vector) = { CellwiseVectorTransformation(this, other, CellwiseOperation.Addition) }
-  def dot(other: Vector) = { DotProductTransformation(this, other) }
-
-  def norm2Squared() = { VectorAggregationTransformation(this, VectorwiseOperation.Norm2Squared) }
-  def norm2() = { VectorAggregationTransformation(this, VectorwiseOperation.Norm2) }
-  def max() = { VectorAggregationTransformation(this, VectorwiseOperation.Max) }
-  def min() = { VectorAggregationTransformation(this, VectorwiseOperation.Min) }
-  def avg() = { VectorAggregationTransformation(this, VectorwiseOperation.Average) }
-
-  def +(other: Vector) = plus(other)
-  def /(scalar: ScalarRef) = { ScalarVectorTransformation(scalar, this, ScalarsOperation.Division) }
+  def normalizeRows(norm: Int) = {
+    norm match {
+      case 1 => VectorwiseMatrixTransformation(this, VectorwiseOperation.NormalizeL1)
+    }
+  }
 }
 
 abstract class ScalarRef extends Executable {
 
   def times(matrix: Matrix) = { ScalarMatrixTransformation(this, matrix, ScalarsOperation.Multiplication) }
-  def times(vector: Vector) = { ScalarVectorTransformation(this, vector, ScalarsOperation.Multiplication) }
   def div(matrix: Matrix) = { ScalarMatrixTransformation(this, matrix, ScalarsOperation.Division) }
   def div(other: ScalarRef) = { ScalarScalarTransformation(this, other, ScalarsOperation.Division) }
   def minus(other: ScalarRef) = { ScalarScalarTransformation(this, other, ScalarsOperation.Subtraction) }
 
   def *(matrix: Matrix) = times(matrix)
-  def *(vector: Vector) = times(vector)
   def -(other: ScalarRef) = minus(other)
 }
 

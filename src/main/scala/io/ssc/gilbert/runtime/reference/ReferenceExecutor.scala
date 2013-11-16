@@ -19,8 +19,7 @@
 package io.ssc.gilbert.runtime.reference
 
 import io.ssc.gilbert._
-import org.apache.mahout.math.{DenseVector2, Vector, SparseRowMatrix}
-import org.apache.mahout.math.function.Functions
+import org.apache.mahout.math.{DenseMatrix, SparseRowMatrix}
 import io.ssc.gilbert.runtime.VectorFunctions
 import io.ssc.gilbert.AggregateMatrixTransformation
 import io.ssc.gilbert.MatrixMult
@@ -41,22 +40,19 @@ object ReferenceExecutorRunner {
 
     val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    val x_0 = ones(3) / scalar(1 / math.sqrt(3))
+    val b = ones(3, 1) / math.sqrt(3)
 
-    val eigenvector = fixpoint(x_0, { x => (A * x) / norm2(A * x) })
-
-    local(eigenvector)
+    local(norm2(A * b))
   }
 }
 
 class ReferenceExecutor extends Executor {
 
+  type MahoutMatrix = org.apache.mahout.math.Matrix
 
   def run(executable: Executable) = {
 
     setRedirects(new CommonSubexpressionDetector().find(executable))
-
-    //print(new CommonSubexpressionDetector().find(executable))
 
     printPlan(executable)
 
@@ -64,9 +60,8 @@ class ReferenceExecutor extends Executor {
   }
 
   //TODO fix this
-  var iterationState: Vector = null
+  var iterationState: MahoutMatrix = null
 
-  //TODO refactor
   protected def execute(executable: Executable): Any = {
 
     executable match {
@@ -89,14 +84,14 @@ class ReferenceExecutor extends Executor {
 
       case (transformation: FixpointIteration) => {
 
-        iterationState = handle[FixpointIteration, Vector](transformation,
-            { transformation => evaluate[Vector](transformation.initialState) },
-            { (_, initialVector) => initialVector }).asInstanceOf[Vector]
+        iterationState = handle[FixpointIteration, MahoutMatrix](transformation,
+            { transformation => evaluate[MahoutMatrix](transformation.initialState) },
+            { (_, initialVector) => initialVector }).asInstanceOf[MahoutMatrix]
 
         for (_ <- 1 to 10) {
-          iterationState = handle[FixpointIteration, Vector](transformation,
-            { transformation => evaluate[Vector](transformation.updatePlan) },
-            { (_, vector) => vector }).asInstanceOf[Vector]
+          iterationState = handle[FixpointIteration, MahoutMatrix](transformation,
+            { transformation => evaluate[MahoutMatrix](transformation.updatePlan) },
+            { (_, vector) => vector }).asInstanceOf[MahoutMatrix]
         }
 
         iterationState
@@ -106,8 +101,8 @@ class ReferenceExecutor extends Executor {
 
       case (transformation: CellwiseMatrixTransformation) => {
 
-        handle[CellwiseMatrixTransformation, SparseRowMatrix](transformation,
-            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
+        handle[CellwiseMatrixTransformation, MahoutMatrix](transformation,
+            { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case ScalarOperation.Binarize => { matrix.assign(VectorFunctions.binarize) }
@@ -117,36 +112,40 @@ class ReferenceExecutor extends Executor {
 
       case (transformation: Transpose) => {
 
-        handle[Transpose, SparseRowMatrix](transformation,
-            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
+        handle[Transpose, MahoutMatrix](transformation,
+            { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (transformation, matrix) => matrix.transpose() })
       }
 
       case (transformation: MatrixMult) => {
 
-        handle[MatrixMult, (SparseRowMatrix, SparseRowMatrix)](transformation,
+        handle[MatrixMult, (MahoutMatrix, MahoutMatrix)](transformation,
             { transformation => {
-              (evaluate[SparseRowMatrix](transformation.left), evaluate[SparseRowMatrix](transformation.right))
+              (evaluate[MahoutMatrix](transformation.left), evaluate[MahoutMatrix](transformation.right))
             }},
             { case (_, (leftMatrix, rightMatrix)) => leftMatrix.times(rightMatrix) })
       }
 
       case (transformation: AggregateMatrixTransformation) => {
 
-        handle[AggregateMatrixTransformation, SparseRowMatrix](transformation,
-            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
+        handle[AggregateMatrixTransformation, MahoutMatrix](transformation,
+            { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
-                case (ScalarsOperation.Maximum) => { matrix.aggregate(VectorFunctions.max, VectorFunctions.identity) }
+                case ScalarsOperation.Maximum => { matrix.aggregate(VectorFunctions.max, VectorFunctions.identity) }
+                case ScalarsOperation.Norm2 => {
+                  val sumOfSquaredEntries = matrix.aggregateRows(VectorFunctions.lengthSquared).zSum()
+                  math.sqrt(sumOfSquaredEntries)
+                }
               }
             }})
       }
 
       case (transformation: ScalarMatrixTransformation) => {
 
-        handle[ScalarMatrixTransformation, (SparseRowMatrix, Double)](transformation,
+        handle[ScalarMatrixTransformation, (MahoutMatrix, Double)](transformation,
             { transformation => {
-              (evaluate[SparseRowMatrix](transformation.matrix), (evaluate[Double](transformation.scalar)))
+              (evaluate[MahoutMatrix](transformation.matrix), (evaluate[Double](transformation.scalar)))
             }},
             { case (transformation, (matrix, scalar)) => {
               transformation.operation match {
@@ -156,19 +155,10 @@ class ReferenceExecutor extends Executor {
             }})
       }
 
-      case (transformation: MatrixVectorMult) => {
-
-        handle[MatrixVectorMult, (SparseRowMatrix, Vector)](transformation,
-            { transformation => {
-              (evaluate[SparseRowMatrix](transformation.matrix), evaluate[Vector](transformation.vector))
-            }},
-            { case (_, (matrix, vector)) => matrix.times(vector) })
-      }
-
       case (transformation: VectorwiseMatrixTransformation) => {
 
-        handle[VectorwiseMatrixTransformation, SparseRowMatrix](transformation,
-            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
+        handle[VectorwiseMatrixTransformation, MahoutMatrix](transformation,
+            { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
                 case (VectorwiseOperation.NormalizeL1) => {
@@ -178,58 +168,6 @@ class ReferenceExecutor extends Executor {
                 }
                 matrix
               }
-
-            }})
-      }
-
-      case (transformation: MatrixToVectorTransformation) => {
-
-        handle[MatrixToVectorTransformation, SparseRowMatrix](transformation,
-            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
-            { (transformation, matrix) => {
-              transformation.operation match {
-                case (MatrixwiseOperation.RowSums) => { matrix.aggregateRows(VectorFunctions.sum) }
-              }
-            }})
-      }
-
-      case (transformation: ScalarVectorTransformation) => {
-
-        handle[ScalarVectorTransformation, (Vector, Double)](transformation,
-            { transformation => (evaluate[Vector](transformation.vector), evaluate[Double](transformation.scalar)) },
-            { case (transformation, (vector, scalar)) => {
-              transformation.operation match {
-                case (ScalarsOperation.Division) => { vector.assign(Functions.DIV, scalar) }
-                case (ScalarsOperation.Multiplication) => { vector.assign(Functions.MULT, scalar) }
-              }
-            }})
-      }
-
-      case (transformation: VectorAggregationTransformation) => {
-
-        handle[VectorAggregationTransformation, Vector](transformation,
-            { transformation => evaluate[Vector](transformation.vector) },
-            { (transformation, vector) => {
-              transformation.operation match {
-                case (VectorwiseOperation.Norm2Squared) => {
-                  val norm = vector.norm(2)
-                  norm * norm
-                }
-                case (VectorwiseOperation.Norm2) => vector.norm(2)
-                case (VectorwiseOperation.Max) => vector.maxValue()
-                case (VectorwiseOperation.Min) => vector.minValue()
-                case (VectorwiseOperation.Average) => vector.zSum() / vector.size()
-              }
-            }})
-      }
-
-      case (transformation: CellwiseVectorTransformation) => {
-        handle[CellwiseVectorTransformation, (Vector, Vector)](transformation,
-            { transformation => (evaluate[Vector](transformation.left), evaluate[Vector](transformation.right)) },
-            { case (transformation, (left, right)) => {
-              transformation.operation match {
-                case (CellwiseOperation.Addition) => { left.assign(right, Functions.PLUS) }
-              }
             }})
       }
 
@@ -237,7 +175,7 @@ class ReferenceExecutor extends Executor {
 
         handle[ones, Unit](transformation,
             { _ => },
-            { (transformation, _) => new DenseVector2(transformation.size).assign(1) })
+            { (transformation, _) => { new DenseMatrix(transformation.rows, transformation.columns).assign(1) }})
       }
 
       case (transformation: rand) => {
@@ -245,22 +183,16 @@ class ReferenceExecutor extends Executor {
         handle[rand, Unit](transformation,
             { _ => },
             { (transformation, _) => {
-              new DenseVector2(transformation.size).assign(new Normal(transformation.mean, transformation.std))
+              new DenseMatrix(transformation.rows, transformation.columns)
+                 .assign(new Normal(transformation.mean, transformation.std))
             }})
       }
 
       case (transformation: WriteMatrix) => {
 
-        handle[WriteMatrix, SparseRowMatrix](transformation,
-            { transformation => evaluate[SparseRowMatrix](transformation.matrix) },
+        handle[WriteMatrix, MahoutMatrix](transformation,
+            { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (_, matrix) => println(matrix) })
-      }
-
-      case (transformation: WriteVector) => {
-
-        handle[WriteVector, Vector](transformation,
-            { transformation => evaluate[Vector](transformation.vector) },
-            { (_, vector) => println(vector) })
       }
 
       case (transformation: scalar) => {

@@ -20,17 +20,14 @@ package io.ssc.gilbert.shell
 
 import io.ssc.gilbert._
 import io.ssc.gilbert.AggregateMatrixTransformation
-import io.ssc.gilbert.WriteVector
 import io.ssc.gilbert.MatrixMult
 import io.ssc.gilbert.scalar
 import io.ssc.gilbert.CellwiseMatrixTransformation
-import io.ssc.gilbert.ScalarVectorTransformation
 import io.ssc.gilbert.WriteMatrix
 import io.ssc.gilbert.Transpose
 import io.ssc.gilbert.ones
 import io.ssc.gilbert.rand
 import io.ssc.gilbert.LoadMatrix
-import io.ssc.gilbert.MatrixToVectorTransformation
 
 object printPlan {
 
@@ -68,6 +65,12 @@ class PlanPrinter {
         print(op.matrix, depth + 1)
       }
 
+      case (op: CellwiseMatrixMatrixTransformation) => {
+        printIndented(depth, op, "CellwiseMatrixMatrixTransformation [" + op.operation + "]")
+        print(op.left, depth + 1)
+        print(op.right, depth + 1)
+      }
+
       case (op: Transpose) => {
         printIndented(depth, op,"Transpose")
         print(op.matrix, depth + 1)
@@ -95,34 +98,6 @@ class PlanPrinter {
         print(op.scalar, depth + 1)
       }
 
-      case (op: MatrixVectorMult) => {
-        printIndented(depth, op,"MatrixVectorMult")
-        print(op.matrix, depth + 1)
-        print(op.vector, depth + 1)
-      }
-
-      case (op: MatrixToVectorTransformation) => {
-        printIndented(depth, op,"MatrixToVectorAggregationOp [" + op.operation + "]")
-        print(op.matrix, depth + 1)
-      }
-
-      case (op: CellwiseVectorTransformation) => {
-        printIndented(depth, op,"CellwiseVectorTransformation [" + op.operation + "]")
-        print(op.left, depth + 1)
-        print(op.right, depth + 1)
-      }
-
-      case (op: ScalarVectorTransformation) => {
-        printIndented(depth, op,"ScalarVectorOp [" + op.operation + "]")
-        print(op.vector, depth + 1)
-        print(op.scalar, depth + 1)
-      }
-
-      case (op: VectorAggregationTransformation) => {
-        printIndented(depth, op,"VectorAggregationTransformation [" + op.operation + "]")
-        print(op.vector, depth + 1)
-      }
-
       case (op: ones) => {
         printIndented(depth, op,op.toString)
       }
@@ -134,11 +109,6 @@ class PlanPrinter {
       case (op: WriteMatrix) => {
         printIndented(depth, op,"WriteMatrix")
         print(op.matrix, depth + 1)
-      }
-
-      case (op: WriteVector) => {
-        printIndented(depth, op,"WriteVector")
-        print(op.vector, depth + 1)
       }
 
       case (op: scalar) => {

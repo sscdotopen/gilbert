@@ -31,6 +31,10 @@ object VectorFunctions {
     def apply(v: Vector) = v.zSum()
   }
 
+  def lengthSquared = new VectorFunction {
+    def apply(v: Vector) = v.getLengthSquared()
+  }
+
   def max = new DoubleDoubleFunction {
     def apply(value1: Double, value2: Double) = math.max(value1, value2)
   }

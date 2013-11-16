@@ -19,21 +19,22 @@
 package io.ssc.gilbert.optimization
 
 import io.ssc.gilbert._
-import io.ssc.gilbert.WriteVector
 import io.ssc.gilbert.MatrixMult
 import io.ssc.gilbert.WriteMatrix
 import io.ssc.gilbert.Transpose
 import io.ssc.gilbert.ones
-import io.ssc.gilbert.ScalarVectorTransformation
 import io.ssc.gilbert.CellwiseMatrixTransformation
 import io.ssc.gilbert.rand
 import io.ssc.gilbert.LoadMatrix
 import io.ssc.gilbert.AggregateMatrixTransformation
 import io.ssc.gilbert.scalar
 import io.ssc.gilbert.ScalarMatrixTransformation
-import io.ssc.gilbert.MatrixToVectorTransformation
 
 abstract class Walker {
+
+  private var iteration = 0
+
+  def currentIteration() = iteration
 
   def onArrival(transformation: Executable) = {}
   def onLeave(transformation: Executable) = {}
@@ -48,10 +49,14 @@ abstract class Walker {
       }
 
       case (transformation: FixpointIteration) => {
+        iteration += 1
+
         onArrival(transformation)
         visit(transformation.initialState)
         visit(transformation.updatePlan)
         onLeave(transformation)
+
+        iteration -= 1
       }
 
       case (transformation: IterationStatePlaceholder) => {
@@ -62,6 +67,13 @@ abstract class Walker {
       case (transformation: CellwiseMatrixTransformation) => {
         onArrival(transformation)
         visit(transformation.matrix)
+        onLeave(transformation)
+      }
+
+      case (transformation: CellwiseMatrixMatrixTransformation) => {
+        onArrival(transformation)
+        visit(transformation.left)
+        visit(transformation.right)
         onLeave(transformation)
       }
 
@@ -97,39 +109,6 @@ abstract class Walker {
         onLeave(transformation)
       }
 
-      case (transformation: MatrixVectorMult) => {
-        onArrival(transformation)
-        visit(transformation.matrix)
-        visit(transformation.vector)
-        onLeave(transformation)
-      }
-
-      case (transformation: MatrixToVectorTransformation) => {
-        onArrival(transformation)
-        visit(transformation.matrix)
-        onLeave(transformation)
-      }
-
-      case (transformation: ScalarVectorTransformation) => {
-        onArrival(transformation)
-        visit(transformation.vector)
-        visit(transformation.scalar)
-        onLeave(transformation)
-      }
-
-      case (transformation: VectorAggregationTransformation) => {
-        onArrival(transformation)
-        visit(transformation.vector)
-        onLeave(transformation)
-      }
-
-      case (transformation: CellwiseVectorTransformation) => {
-        onArrival(transformation)
-        visit(transformation.left)
-        visit(transformation.right)
-        onLeave(transformation)
-      }
-
       case (transformation: ones) => {
         onArrival(transformation)
         onLeave(transformation)
@@ -143,12 +122,6 @@ abstract class Walker {
       case (transformation: WriteMatrix) => {
         onArrival(transformation)
         visit(transformation.matrix)
-        onLeave(transformation)
-      }
-
-      case (transformation: WriteVector) => {
-        onArrival(transformation)
-        visit(transformation.vector)
         onLeave(transformation)
       }
 

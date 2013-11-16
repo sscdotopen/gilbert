@@ -25,7 +25,8 @@ object ScalarOperation extends Enumeration {
 
 object ScalarsOperation extends Enumeration {
   type ScalarsOperation = Value
-  val Addition, Subtraction, Multiplication, Division, Maximum = Value
+  //TODO does norm2 belong here?
+  val Addition, Subtraction, Multiplication, Division, Maximum, Norm2 = Value
 }
 
 object CellwiseOperation extends Enumeration {
