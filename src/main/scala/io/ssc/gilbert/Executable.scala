@@ -37,6 +37,7 @@ trait Executor {
     val input = retrieveInput(executable)
 
 
+    //TODO fix this to handle subexpressions inside of a fixpoint iteration
     if (executable.getClass != classOf[FixpointIteration]) {
 
       /* check if we already processed this expression */

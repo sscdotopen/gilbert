@@ -73,7 +73,7 @@ class SparkExecutor extends Executor {
 
     executable match {
 
-      case (transformation: LoadMatrix) => {
+      case transformation: LoadMatrix => {
 
         handle[LoadMatrix, Unit](transformation,
             { _ => },
@@ -91,25 +91,25 @@ class SparkExecutor extends Executor {
             }})
       }
 
-      case (transformation: FixpointIteration) => {
+      case transformation: FixpointIteration => {
 
         iterationState = handle[FixpointIteration, Vector](transformation,
-        { transformation => evaluate[Vector](transformation.initialState) },
-        { (_, initialVector) => initialVector }).asInstanceOf[Vector]
+            { transformation => evaluate[Vector](transformation.initialState) },
+            { (_, initialVector) => initialVector }).asInstanceOf[Vector]
 
         for (_ <- 1 to 10) {
           iterationState = handle[FixpointIteration, Vector](transformation,
-          { transformation => evaluate[Vector](transformation.updatePlan) },
-          { (_, vector) => vector }).asInstanceOf[Vector]
+              { transformation => evaluate[Vector](transformation.updatePlan) },
+              { (_, vector) => vector }).asInstanceOf[Vector]
         }
 
         iterationState
       }
 
-      case (transformation: IterationStatePlaceholder) => { iterationState }
+      case transformation: IterationStatePlaceholder => iterationState
 
 
-      case (transformation: CellwiseMatrixTransformation) => {
+      case transformation: CellwiseMatrixTransformation => {
 
         handle[CellwiseMatrixTransformation, RowPartitionedMatrix](transformation,
             { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
@@ -123,7 +123,7 @@ class SparkExecutor extends Executor {
             }})
       }
 
-      case (transformation: AggregateMatrixTransformation) => {
+      case transformation: AggregateMatrixTransformation => {
 
         handle[AggregateMatrixTransformation, RowPartitionedMatrix](transformation,
             { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
@@ -141,7 +141,7 @@ class SparkExecutor extends Executor {
             }})
       }
 
-      case (transformation: Transpose) => {
+      case transformation: Transpose => {
 
         handle[Transpose, RowPartitionedMatrix](transformation,
             { transformation => evaluate[RowPartitionedMatrix](transformation.matrix)},
@@ -160,7 +160,7 @@ class SparkExecutor extends Executor {
       }
 
        //TODO we should eliminate transpose before
-      case (transformation: MatrixMult) => {
+      case transformation: MatrixMult => {
 
         handle[MatrixMult, (RowPartitionedMatrix, RowPartitionedMatrix)](transformation,
             { transformation => {
@@ -191,7 +191,7 @@ class SparkExecutor extends Executor {
             }})
       }
 
-      case (transformation: ScalarMatrixTransformation) => {
+      case transformation: ScalarMatrixTransformation => {
 
         handle[ScalarMatrixTransformation, (RowPartitionedMatrix, Double)](transformation,
           { transformation => {
@@ -199,7 +199,7 @@ class SparkExecutor extends Executor {
           }},
           { case (transformation, (matrix, value)) => {
             transformation.operation match {
-              case (ScalarsOperation.Division) => {
+              case ScalarsOperation.Division => {
                 matrix.map({ case (index, row) => (index, row.assign(Functions.DIV, value)) })
               }
             }
@@ -207,7 +207,7 @@ class SparkExecutor extends Executor {
       }
 
       //TODO rework
-      case (transformation: ones) => {
+      case transformation: ones => {
 
         handle[ones, Unit](transformation,
             { _ => },
@@ -222,7 +222,7 @@ class SparkExecutor extends Executor {
       }
 
       //TODO rework
-      case (transformation: rand) => {
+      case transformation: rand => {
 
         handle[rand, Unit](transformation,
             { _ => },
@@ -238,7 +238,7 @@ class SparkExecutor extends Executor {
             }})
       }
 
-      case (transformation: WriteMatrix) => {
+      case transformation: WriteMatrix => {
 
         handle[WriteMatrix, RowPartitionedMatrix](transformation,
             { transformation => evaluate[RowPartitionedMatrix](transformation.matrix) },
@@ -249,14 +249,14 @@ class SparkExecutor extends Executor {
             }})
       }
 
-      case (transformation: scalar) => {
+      case transformation: scalar => {
 
         handle[scalar, Unit](transformation,
             { _ => },
             { (transformation, _) => transformation.value })
       }
 
-      case (transformation: WriteScalarRef) => {
+      case transformation: WriteScalarRef => {
 
         handle[WriteScalarRef, Double](transformation,
             { transformation => evaluate[Double](transformation.scalar) },

@@ -31,10 +31,6 @@ import io.ssc.gilbert.LoadMatrix
 
 object printPlan {
 
-  def main(args: Array[String]) = {
-    printPlan(Examples.cooccurrences)
-  }
-
   def apply(executable: Executable) = {
     new PlanPrinter().print(executable)
   }
@@ -46,78 +42,78 @@ class PlanPrinter {
 
     executable match {
 
-      case (op: LoadMatrix) => {
-        printIndented(depth, op,"LoadMatrix [" + op.path + "]")
+      case transformation: LoadMatrix => {
+        printIndented(depth, transformation, "LoadMatrix [" + transformation.path + "]")
       }
 
-      case (op: FixpointIteration) => {
-        printIndented(depth, op,"FixpointIteration")
-        print(op.initialState, depth + 1)
-        print(op.updatePlan, depth + 1)
+      case transformation: FixpointIteration => {
+        printIndented(depth, transformation, "FixpointIteration")
+        print(transformation.initialState, depth + 1)
+        print(transformation.updatePlan, depth + 1)
       }
 
-      case (op: IterationStatePlaceholder) => {
-        printIndented(depth, op,"IterationState")
+      case transformation: IterationStatePlaceholder => {
+        printIndented(depth, transformation, "IterationState")
       }
 
-      case (op: CellwiseMatrixTransformation) => {
-        printIndented(depth, op,"CellwiseMatrixOp [" + op.operation + "]")
-        print(op.matrix, depth + 1)
+      case transformation: CellwiseMatrixTransformation => {
+        printIndented(depth, transformation, "CellwiseMatrixOp [" + transformation.operation + "]")
+        print(transformation.matrix, depth + 1)
       }
 
-      case (op: CellwiseMatrixMatrixTransformation) => {
-        printIndented(depth, op, "CellwiseMatrixMatrixTransformation [" + op.operation + "]")
-        print(op.left, depth + 1)
-        print(op.right, depth + 1)
+      case transformation: CellwiseMatrixMatrixTransformation => {
+        printIndented(depth, transformation, "CellwiseMatrixMatrixTransformation [" + transformation.operation + "]")
+        print(transformation.left, depth + 1)
+        print(transformation.right, depth + 1)
       }
 
-      case (op: Transpose) => {
-        printIndented(depth, op,"Transpose")
-        print(op.matrix, depth + 1)
+      case transformation: Transpose => {
+        printIndented(depth, transformation, "Transpose")
+        print(transformation.matrix, depth + 1)
       }
 
-      case (op: MatrixMult) => {
-        printIndented(depth, op,"MatrixMult")
-        print(op.left, depth + 1)
-        print(op.right, depth + 1)
+      case transformation: MatrixMult => {
+        printIndented(depth, transformation, "MatrixMult")
+        print(transformation.left, depth + 1)
+        print(transformation.right, depth + 1)
       }
 
-      case (op: AggregateMatrixTransformation) => {
-        printIndented(depth, op,"AggregateMatrixOp [" + op.operation + "]")
-        print(op.matrix, depth + 1)
+      case transformation: AggregateMatrixTransformation => {
+        printIndented(depth, transformation, "AggregateMatrixOp [" + transformation.operation + "]")
+        print(transformation.matrix, depth + 1)
       }
 
-      case (op: VectorwiseMatrixTransformation) => {
-        printIndented(depth, op,"VectorwiseMatrixTransformation [" + op.operation + "]")
-        print(op.matrix, depth + 1)
+      case transformation: VectorwiseMatrixTransformation => {
+        printIndented(depth, transformation, "VectorwiseMatrixTransformation [" + transformation.operation + "]")
+        print(transformation.matrix, depth + 1)
       }
 
-      case (op: ScalarMatrixTransformation) => {
-        printIndented(depth, op,"ScalarMatrixOp [" + op.operation + "]")
-        print(op.matrix, depth + 1)
-        print(op.scalar, depth + 1)
+      case transformation: ScalarMatrixTransformation => {
+        printIndented(depth, transformation, "ScalarMatrixOp [" + transformation.operation + "]")
+        print(transformation.matrix, depth + 1)
+        print(transformation.scalar, depth + 1)
       }
 
-      case (op: ones) => {
-        printIndented(depth, op,op.toString)
+      case transformation: ones => {
+        printIndented(depth, transformation, transformation.toString)
       }
 
-      case (op: rand) => {
-        printIndented(depth, op,op.toString)
+      case transformation: rand => {
+        printIndented(depth, transformation, transformation.toString)
       }
 
-      case (op: WriteMatrix) => {
-        printIndented(depth, op,"WriteMatrix")
-        print(op.matrix, depth + 1)
+      case transformation: WriteMatrix => {
+        printIndented(depth, transformation, "WriteMatrix")
+        print(transformation.matrix, depth + 1)
       }
 
-      case (op: scalar) => {
-        printIndented(depth, op,op.value.toString)
+      case transformation: scalar => {
+        printIndented(depth, transformation, transformation.value.toString)
       }
 
-      case (op: WriteScalarRef) => {
-        printIndented(depth, op,"WriteScalarRef")
-        print(op.scalar, depth + 1)
+      case transformation: WriteScalarRef => {
+        printIndented(depth, transformation, "WriteScalarRef")
+        print(transformation.scalar, depth + 1)
       }
     }
 

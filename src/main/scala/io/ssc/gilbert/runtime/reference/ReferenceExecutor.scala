@@ -65,7 +65,7 @@ class ReferenceExecutor extends Executor {
   protected def execute(executable: Executable): Any = {
 
     executable match {
-      case (transformation: LoadMatrix) => {
+      case transformation: LoadMatrix => {
 
         handle[LoadMatrix, Unit](transformation,
             { _ => },
@@ -82,7 +82,7 @@ class ReferenceExecutor extends Executor {
             }})
       }
 
-      case (transformation: FixpointIteration) => {
+      case transformation: FixpointIteration => {
 
         iterationState = handle[FixpointIteration, MahoutMatrix](transformation,
             { transformation => evaluate[MahoutMatrix](transformation.initialState) },
@@ -97,9 +97,9 @@ class ReferenceExecutor extends Executor {
         iterationState
       }
 
-      case (transformation: IterationStatePlaceholder) => { iterationState }
+      case transformation: IterationStatePlaceholder => iterationState
 
-      case (transformation: CellwiseMatrixTransformation) => {
+      case transformation: CellwiseMatrixTransformation => {
 
         handle[CellwiseMatrixTransformation, MahoutMatrix](transformation,
             { transformation => evaluate[MahoutMatrix](transformation.matrix) },
@@ -110,14 +110,14 @@ class ReferenceExecutor extends Executor {
             }})
       }
 
-      case (transformation: Transpose) => {
+      case transformation: Transpose => {
 
         handle[Transpose, MahoutMatrix](transformation,
             { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (transformation, matrix) => matrix.transpose() })
       }
 
-      case (transformation: MatrixMult) => {
+      case transformation: MatrixMult => {
 
         handle[MatrixMult, (MahoutMatrix, MahoutMatrix)](transformation,
             { transformation => {
@@ -126,7 +126,7 @@ class ReferenceExecutor extends Executor {
             { case (_, (leftMatrix, rightMatrix)) => leftMatrix.times(rightMatrix) })
       }
 
-      case (transformation: AggregateMatrixTransformation) => {
+      case transformation: AggregateMatrixTransformation => {
 
         handle[AggregateMatrixTransformation, MahoutMatrix](transformation,
             { transformation => evaluate[MahoutMatrix](transformation.matrix) },
@@ -141,7 +141,7 @@ class ReferenceExecutor extends Executor {
             }})
       }
 
-      case (transformation: ScalarMatrixTransformation) => {
+      case transformation: ScalarMatrixTransformation => {
 
         handle[ScalarMatrixTransformation, (MahoutMatrix, Double)](transformation,
             { transformation => {
@@ -149,19 +149,19 @@ class ReferenceExecutor extends Executor {
             }},
             { case (transformation, (matrix, scalar)) => {
               transformation.operation match {
-                case (ScalarsOperation.Division) => { matrix.divide(scalar) }
-                case (ScalarsOperation.Multiplication) => { matrix.times(scalar) }
+                case ScalarsOperation.Division => matrix.divide(scalar)
+                case ScalarsOperation.Multiplication => matrix.times(scalar)
               }
             }})
       }
 
-      case (transformation: VectorwiseMatrixTransformation) => {
+      case transformation: VectorwiseMatrixTransformation => {
 
         handle[VectorwiseMatrixTransformation, MahoutMatrix](transformation,
             { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (transformation, matrix) => {
               transformation.operation match {
-                case (VectorwiseOperation.NormalizeL1) => {
+                case VectorwiseOperation.NormalizeL1 => {
                   for (index <- 0 until matrix.numRows()) {
                     matrix.viewRow(index).normalize(1)
                   }
@@ -171,7 +171,7 @@ class ReferenceExecutor extends Executor {
             }})
       }
 
-      case (transformation:  CellwiseMatrixMatrixTransformation) => {
+      case transformation:  CellwiseMatrixMatrixTransformation => {
 
         handle[CellwiseMatrixMatrixTransformation, (MahoutMatrix, MahoutMatrix)](transformation,
             { transformation => {
@@ -184,14 +184,14 @@ class ReferenceExecutor extends Executor {
             }})
       }
 
-      case (transformation: ones) => {
+      case transformation: ones => {
 
         handle[ones, Unit](transformation,
             { _ => },
-            { (transformation, _) => { new DenseMatrix(transformation.rows, transformation.columns).assign(1) }})
+            { (transformation, _) => new DenseMatrix(transformation.rows, transformation.columns).assign(1) })
       }
 
-      case (transformation: rand) => {
+      case transformation: rand => {
 
         handle[rand, Unit](transformation,
             { _ => },
@@ -201,21 +201,21 @@ class ReferenceExecutor extends Executor {
             }})
       }
 
-      case (transformation: WriteMatrix) => {
+      case transformation: WriteMatrix => {
 
         handle[WriteMatrix, MahoutMatrix](transformation,
             { transformation => evaluate[MahoutMatrix](transformation.matrix) },
             { (_, matrix) => println(matrix) })
       }
 
-      case (transformation: scalar) => {
+      case transformation: scalar => {
 
         handle[scalar, Unit](transformation,
             { _ => },
             { (transformation, _) => transformation.value })
       }
 
-      case (transformation: WriteScalarRef) => {
+      case transformation: WriteScalarRef => {
 
         handle[WriteScalarRef, Double](transformation,
             { transformation => evaluate[Double](transformation.scalar) },

@@ -20,6 +20,8 @@ package io.ssc.gilbert.optimization
 
 import io.ssc.gilbert.Executable
 
+case class Subexpression(val rootId: Int, val iterationId: Option[Int], val containsIterationState: Boolean)
+
 //TODO needs to handle iteration state!
 class CommonSubexpressionDetector extends Walker {
 
@@ -49,7 +51,11 @@ class CommonSubexpressionDetector extends Walker {
 
     val hash = transformation.hashCode()
 
-    println("\t" + transformation.id + ", " + currentIteration().getOrElse("-") + " " + transformation)
+    val containsIterationState = new IterationStateDetector(transformation).containsIterationState()
+
+    println("\t" + transformation.id + ", " + currentIteration().getOrElse("-") + " " + containsIterationState + " " + transformation)
+
+
 
     val orders = subtreesByHash.getOrElse(hash, Seq()) ++ Seq(transformation.id)
     subtreesByHash += (hash -> orders)

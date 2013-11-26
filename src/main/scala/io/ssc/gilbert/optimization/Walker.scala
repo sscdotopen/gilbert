@@ -43,13 +43,13 @@ abstract class Walker {
 
     transformation match {
 
-      case (transformation: LoadMatrix) => {
+      case transformation: LoadMatrix => {
         onArrival(transformation)
         onLeave(transformation)
       }
 
       //TODO needs to handle nested iterations?
-      case (transformation: FixpointIteration) => {
+      case transformation: FixpointIteration => {
         iteration = Some(transformation.id)
 
         onArrival(transformation)
@@ -60,78 +60,78 @@ abstract class Walker {
         iteration = None
       }
 
-      case (transformation: IterationStatePlaceholder) => {
+      case transformation: IterationStatePlaceholder => {
         onArrival(transformation)
         onLeave(transformation)
       }
 
-      case (transformation: CellwiseMatrixTransformation) => {
+      case transformation: CellwiseMatrixTransformation => {
         onArrival(transformation)
         visit(transformation.matrix)
         onLeave(transformation)
       }
 
-      case (transformation: CellwiseMatrixMatrixTransformation) => {
+      case transformation: CellwiseMatrixMatrixTransformation => {
         onArrival(transformation)
         visit(transformation.left)
         visit(transformation.right)
         onLeave(transformation)
       }
 
-      case (transformation: Transpose) => {
+      case transformation: Transpose => {
         onArrival(transformation)
         visit(transformation.matrix)
         onLeave(transformation)
       }
 
-      case (transformation: MatrixMult) => {
+      case transformation: MatrixMult => {
         onArrival(transformation)
         visit(transformation.left)
         visit(transformation.right)
         onLeave(transformation)
       }
 
-      case (transformation: AggregateMatrixTransformation) => {
+      case transformation: AggregateMatrixTransformation => {
         onArrival(transformation)
         visit(transformation.matrix)
         onLeave(transformation)
       }
 
-      case (transformation: ScalarMatrixTransformation) => {
+      case transformation: ScalarMatrixTransformation => {
         onArrival(transformation)
         visit(transformation.matrix)
         visit(transformation.scalar)
         onLeave(transformation)
       }
 
-      case (transformation: VectorwiseMatrixTransformation) => {
+      case transformation: VectorwiseMatrixTransformation => {
         onArrival(transformation)
         visit(transformation.matrix)
         onLeave(transformation)
       }
 
-      case (transformation: ones) => {
+      case transformation: ones => {
         onArrival(transformation)
         onLeave(transformation)
       }
 
-      case (transformation: rand) => {
+      case transformation: rand => {
         onArrival(transformation)
         onLeave(transformation)
       }
 
-      case (transformation: WriteMatrix) => {
+      case transformation: WriteMatrix => {
         onArrival(transformation)
         visit(transformation.matrix)
         onLeave(transformation)
       }
 
-      case (transformation: scalar) => {
+      case transformation: scalar => {
         onArrival(transformation)
         onLeave(transformation)
       }
 
-      case (transformation: WriteScalarRef) => {
+      case transformation: WriteScalarRef => {
         onArrival(transformation)
         visit(transformation.scalar)
         onLeave(transformation)
