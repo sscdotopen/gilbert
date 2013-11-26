@@ -36,7 +36,7 @@ object CellwiseOperation extends Enumeration {
 
 object VectorwiseOperation extends Enumeration {
   type VectorwiseOperation = Value
-  val Max, Min, Average, Norm2Squared, Norm2, NormalizeL1 = Value
+  val Max, Min, Average, Norm2Squared, Norm2, NormalizeL1, Sum = Value
 }
 
 object MatrixwiseOperation extends Enumeration {

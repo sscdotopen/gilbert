@@ -32,7 +32,7 @@ import io.ssc.gilbert.ScalarMatrixTransformation
 
 abstract class Walker {
 
-  private var iteration = 0
+  private var iteration: Option[Int] = None
 
   def currentIteration() = iteration
 
@@ -48,15 +48,16 @@ abstract class Walker {
         onLeave(transformation)
       }
 
+      //TODO needs to handle nested iterations?
       case (transformation: FixpointIteration) => {
-        iteration += 1
+        iteration = Some(transformation.id)
 
         onArrival(transformation)
         visit(transformation.initialState)
         visit(transformation.updatePlan)
         onLeave(transformation)
 
-        iteration -= 1
+        iteration = None
       }
 
       case (transformation: IterationStatePlaceholder) => {

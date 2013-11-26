@@ -22,12 +22,15 @@ abstract class Matrix extends Executable {
 
   def transpose() = { Transpose(this) }
 
-  def times(other: Matrix) = { MatrixMult(this, other) }
-  def times(scalar: ScalarRef) = { ScalarMatrixTransformation(scalar, this, ScalarsOperation.Multiplication) }
+  def *(other: Matrix) = { MatrixMult(this, other) }
+  def *(scalar: ScalarRef) = { ScalarMatrixTransformation(scalar, this, ScalarsOperation.Multiplication) }
 
   def div(scalar: ScalarRef) = { ScalarMatrixTransformation(scalar, this, ScalarsOperation.Division) }
-  def plus(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Addition) }
-  
+  def +(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Addition) }
+  def -(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Subtraction) }
+  def :*(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Multiplication) }
+  def :/(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Division) }
+
   def binarize() = { CellwiseMatrixTransformation(this, ScalarOperation.Binarize) }
 
   def max() = { AggregateMatrixTransformation(this, ScalarsOperation.Maximum) }
@@ -38,15 +41,20 @@ abstract class Matrix extends Executable {
   }
 
   def t() = transpose
-  def *(other: Matrix) = times(other)
-  def *(scalar: ScalarRef) = times(scalar)
-  def +(other: Matrix) = plus(other)
 
   def /(scalar: ScalarRef) = div(scalar)
+
+
 
   def normalizeRows(norm: Int) = {
     norm match {
       case 1 => VectorwiseMatrixTransformation(this, VectorwiseOperation.NormalizeL1)
+    }
+  }
+
+  def sum(dimension: Int) = {
+    dimension match {
+      case 2 => VectorwiseMatrixTransformation(this, VectorwiseOperation.Sum)
     }
   }
 }

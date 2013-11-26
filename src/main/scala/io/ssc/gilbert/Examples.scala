@@ -48,28 +48,24 @@ object Examples {
 
     val bZero = ones(3, 1) / math.sqrt(3)
 
-    fixpoint(bZero, { b => (A * b) / norm2(A * b) })
+    fixpoint(bZero, { b => (A * b) / norm(A * b, 2) })
   }
   
-  def kMeans = {
+  /*def kMeans = {
 
     val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
     val initialCentroids = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-//    val numCentroids = size(initialCentroids, 1)
-//
-//    val clusters = fixpoint(initialCentroids, { C => {
-//      val D = (sum(A :* A) * ones(1, numCentroids)) - (2 * A * C.t) + (sum(C :* C) * ones(1, numCentroids)
-//      val I = D
-//
-//      (I.t * A) :/ (sum(C.t) *  * ones(1, numCentroids)))
-//    }})
+    val numDatapoints = 3
+    val numCentroids = 3//size(initialCentroids, 1)
 
-
-
-
-
-  }
+    fixpoint(initialCentroids, { C => {
+      val D = repmat(sum(A :* A, 2), 1, numCentroids) - (2 * A * C.t) + repmat(sum(C :* C, 2).t, numDatapoints, 1)
+      val I = D
+      //(I.t * A) :/ repmat(sum(C.t, 2), numCentroids)
+      A
+    }})
+  }              */
 
 
 //  def linearRegression = {

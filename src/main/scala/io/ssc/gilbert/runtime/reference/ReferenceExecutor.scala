@@ -42,7 +42,7 @@ object ReferenceExecutorRunner {
 
     val b = ones(3, 1) / math.sqrt(3)
 
-    local(norm2(A * b))
+    local(norm(A * b, 2))
   }
 }
 
@@ -167,6 +167,19 @@ class ReferenceExecutor extends Executor {
                   }
                 }
                 matrix
+              }
+            }})
+      }
+
+      case (transformation:  CellwiseMatrixMatrixTransformation) => {
+
+        handle[CellwiseMatrixMatrixTransformation, (MahoutMatrix, MahoutMatrix)](transformation,
+            { transformation => {
+              (evaluate[MahoutMatrix](transformation.left), evaluate[MahoutMatrix](transformation.right))
+            }},
+            { case (transformation, (leftMatrix, rightMatrix)) => {
+              transformation.operation match {
+                case CellwiseOperation.Addition => leftMatrix.plus(rightMatrix)
               }
             }})
       }

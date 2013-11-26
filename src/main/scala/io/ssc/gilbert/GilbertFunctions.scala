@@ -37,7 +37,10 @@ object max {
   def apply(matrix: Matrix) = matrix.max()
 }
 
-object norm2 {
-  def apply(matrix: Matrix) = matrix.norm(2);
+object norm {
+  def apply(matrix: Matrix, p: Int = 2) = matrix.norm(p)
 }
 
+object sum {
+  def apply(matrix: Matrix, dimension: Int = 1) = matrix.sum(dimension)
+}

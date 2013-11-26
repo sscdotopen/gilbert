@@ -44,7 +44,7 @@ object SparkExecutorRunner {
 
     val b = ones(3, 1) / math.sqrt(3)
 
-    withSpark(norm2(A * b))
+    withSpark(norm(A * b, 2))
   }
 }
 

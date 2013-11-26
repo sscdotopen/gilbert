@@ -49,7 +49,7 @@ class CommonSubexpressionDetector extends Walker {
 
     val hash = transformation.hashCode()
 
-    println("\t" + transformation.id + ", " + currentIteration() + " " + transformation)
+    println("\t" + transformation.id + ", " + currentIteration().getOrElse("-") + " " + transformation)
 
     val orders = subtreesByHash.getOrElse(hash, Seq()) ++ Seq(transformation.id)
     subtreesByHash += (hash -> orders)
