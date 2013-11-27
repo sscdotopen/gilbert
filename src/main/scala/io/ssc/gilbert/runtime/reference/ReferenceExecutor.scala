@@ -52,8 +52,6 @@ class ReferenceExecutor extends Executor {
 
   def run(executable: Executable) = {
 
-    setRedirects(new CommonSubexpressionDetector().find(executable))
-
     printPlan(executable)
 
     execute(executable)

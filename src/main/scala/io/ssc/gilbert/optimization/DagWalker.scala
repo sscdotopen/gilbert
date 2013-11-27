@@ -29,10 +29,12 @@ import io.ssc.gilbert.LoadMatrix
 import io.ssc.gilbert.AggregateMatrixTransformation
 import io.ssc.gilbert.scalar
 import io.ssc.gilbert.ScalarMatrixTransformation
+import scala.collection.mutable.HashSet
 
-abstract class Walker {
+abstract class DagWalker {
 
   private var iteration: Option[Int] = None
+  private val visited = HashSet.empty[Int]
 
   def currentIteration() = iteration
 
@@ -40,6 +42,12 @@ abstract class Walker {
   def onLeave(transformation: Executable) = {}
 
   def visit(transformation: Executable): Unit = {
+
+    val firstVisit = visited.add(transformation.id)
+
+    if (!firstVisit) {
+      return
+    }
 
     transformation match {
 

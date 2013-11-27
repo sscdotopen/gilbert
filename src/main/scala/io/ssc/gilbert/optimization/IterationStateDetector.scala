@@ -2,7 +2,7 @@ package io.ssc.gilbert.optimization
 
 import io.ssc.gilbert.{IterationStatePlaceholder, Executable}
 
-class IterationStateDetector(val transformation: Executable) extends Walker {
+class IterationStateDetector(val transformation: Executable) extends DagWalker {
 
   var found = false
 

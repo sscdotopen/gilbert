@@ -18,7 +18,7 @@
 
 package io.ssc.gilbert
 
-abstract class Matrix extends Executable {
+abstract class Matrix() extends Executable {
 
   def transpose() = { Transpose(this) }
 
@@ -59,7 +59,7 @@ abstract class Matrix extends Executable {
   }
 }
 
-abstract class ScalarRef extends Executable {
+abstract class ScalarRef() extends Executable {
 
   def times(matrix: Matrix) = { ScalarMatrixTransformation(this, matrix, ScalarsOperation.Multiplication) }
   def div(matrix: Matrix) = { ScalarMatrixTransformation(this, matrix, ScalarsOperation.Division) }

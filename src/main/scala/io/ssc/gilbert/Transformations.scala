@@ -26,24 +26,25 @@ import io.ssc.gilbert.ScalarOperation.ScalarOperation
 
 case class LoadMatrix(path: String, numRows: Int, numColumns: Int) extends Matrix
 
-case class ScalarMatrixTransformation(scalar: ScalarRef, matrix: Matrix, operation: ScalarsOperation)
+case class ScalarMatrixTransformation(var scalar: ScalarRef, var matrix: Matrix, operation: ScalarsOperation)
     extends Matrix
 
-case class Transpose(matrix: Matrix) extends Matrix
+case class Transpose(var matrix: Matrix) extends Matrix
 
-case class MatrixMult(left: Matrix, right: Matrix) extends Matrix
+case class MatrixMult(var left: Matrix, var right: Matrix) extends Matrix
 
-case class CellwiseMatrixMatrixTransformation(left: Matrix, right: Matrix, operation: CellwiseOperation)
+case class CellwiseMatrixMatrixTransformation(var left: Matrix, var right: Matrix, operation: CellwiseOperation)
     extends Matrix
 
-case class CellwiseMatrixTransformation(matrix: Matrix, operation: ScalarOperation) extends Matrix
+case class CellwiseMatrixTransformation(var matrix: Matrix, operation: ScalarOperation) extends Matrix
 
-case class VectorwiseMatrixTransformation(matrix: Matrix, operation: VectorwiseOperation) extends Matrix
+case class VectorwiseMatrixTransformation(var matrix: Matrix, operation: VectorwiseOperation) extends Matrix
 
-case class WriteMatrix(matrix: Matrix) extends Matrix
+case class WriteMatrix(var matrix: Matrix) extends Matrix
 
 case class ones(rows: Int, columns: Int) extends Matrix
 
+///TODO change to sprandn?
 case class rand(rows: Int, columns: Int, mean: Double = 0, std: Double = 1) extends Matrix
 
 case class FixpointIteration(initialState: Matrix, updateFunction: Matrix => Matrix) extends Matrix {
@@ -52,12 +53,11 @@ case class FixpointIteration(initialState: Matrix, updateFunction: Matrix => Mat
 
 case class IterationStatePlaceholder() extends Matrix
 
-
-
 case class scalar(value: Double) extends ScalarRef
 
-case class AggregateMatrixTransformation(matrix: Matrix, operation: ScalarsOperation) extends ScalarRef
+case class AggregateMatrixTransformation(var matrix: Matrix, operation: ScalarsOperation) extends ScalarRef
 
-case class ScalarScalarTransformation(left: ScalarRef, right: ScalarRef, operation: ScalarsOperation) extends ScalarRef
+case class ScalarScalarTransformation(var left: ScalarRef, var right: ScalarRef, operation: ScalarsOperation)
+    extends ScalarRef
 
-case class WriteScalarRef(scalar: ScalarRef) extends ScalarRef
+case class WriteScalarRef(var scalar: ScalarRef) extends ScalarRef

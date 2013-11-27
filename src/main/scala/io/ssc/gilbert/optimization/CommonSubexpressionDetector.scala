@@ -20,25 +20,28 @@ package io.ssc.gilbert.optimization
 
 import io.ssc.gilbert.Executable
 
-case class Subexpression(val rootId: Int, val iterationId: Option[Int], val containsIterationState: Boolean)
+case class CommonSubexpressionCandidate(val rootId: Int, val iterationId: Option[Int], 
+                                        val containsIterationState: Boolean)
 
 //TODO needs to handle iteration state!
-class CommonSubexpressionDetector extends Walker {
+class CommonSubexpressionDetector extends DagWalker {
 
-  private var subtreesByHash = Map[Int, Seq[Int]]()
+  private var candidatesByHash = Map[Int, Seq[CommonSubexpressionCandidate]]()
 
   def find(executable: Executable) = {
     visit(executable)
 
     var repeatedExpressions = Map[Int,Int]()
 
-    for ((hash, orders) <- subtreesByHash) {
-      if (orders.size > 1) {
-        val minOrder = orders.reduce(math.min)
-        val toEliminate = orders.filter(_ != minOrder)
+    for ((hash, candidates) <- candidatesByHash) {
+      if (candidates.size > 1) {
 
-        toEliminate.map((_ -> minOrder)).foreach(repeatedExpressions += _)
-        //eliminatedExpressions.foreach(repeatedExpressions += (_ -> minOrder))
+        candidates.foreach(println)
+        println("----------------")
+        //val minOrder = candidates.reduce(math.min)
+        //val toEliminate = candidates.filter(_ != minOrder)
+
+        //toEliminate.map((_ -> minOrder)).foreach(repeatedExpressions += _)
       }
 
       //TODO check object equality to handle hash collisions!
@@ -49,15 +52,16 @@ class CommonSubexpressionDetector extends Walker {
 
   override def onLeave(transformation: Executable) = {
 
+    //TODO merge, we shouldn't traverse the subtree twice
     val hash = transformation.hashCode()
-
     val containsIterationState = new IterationStateDetector(transformation).containsIterationState()
+    val iterationId = currentIteration()
+    
+    //println("\t" + transformation.id + ", " + currentIteration().getOrElse("-") + " " + containsIterationState + " " + transformation)
 
-    println("\t" + transformation.id + ", " + currentIteration().getOrElse("-") + " " + containsIterationState + " " + transformation)
+    val candidate = CommonSubexpressionCandidate(transformation.id, iterationId, containsIterationState)
 
-
-
-    val orders = subtreesByHash.getOrElse(hash, Seq()) ++ Seq(transformation.id)
-    subtreesByHash += (hash -> orders)
+    val candidates = candidatesByHash.getOrElse(hash, Seq()) ++ Seq(candidate)
+    candidatesByHash += (hash -> candidates)
   }
 }
