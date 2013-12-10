@@ -16,31 +16,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert
+package org.gilbertlang.operations
 
-object load {
-  def apply(path: String, numRows: Int, numColumns: Int) = LoadMatrix(path, numRows, numColumns)
+object ScalarOperation extends Enumeration {
+  type ScalarOperation = Value
+  val Binarize = Value
 }
 
-object fixpoint {
-  def apply(initialState: Matrix, updateFunction: Matrix => Matrix) = {
-    new FixpointIteration(initialState, updateFunction)
-  }
+object ScalarsOperation extends Enumeration {
+  type ScalarsOperation = Value
+  //TODO does norm2 belong here?
+  val Addition, Subtraction, Multiplication, Division, Maximum, Norm2 = Value
 }
 
-
-object binarize {
-  def apply(matrix: Matrix) = matrix.binarize()
+object CellwiseOperation extends Enumeration {
+  type CellwiseOperation = Value
+  val Addition, Subtraction, Multiplication, Division = Value
 }
 
-object max {
-  def apply(matrix: Matrix) = matrix.max()
+object VectorwiseOperation extends Enumeration {
+  type VectorwiseOperation = Value
+  val Max, Min, Average, Norm2Squared, Norm2, NormalizeL1, Sum = Value
 }
 
-object norm {
-  def apply(matrix: Matrix, p: Int = 2) = matrix.norm(p)
-}
-
-object sum {
-  def apply(matrix: Matrix, dimension: Int = 1) = matrix.sum(dimension)
+object MatrixwiseOperation extends Enumeration {
+  type MatrixwiseOperation = Value
+  val RowSums = Value
 }

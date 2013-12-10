@@ -16,7 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert
+package org.gilbertlang.examples
+
+import org.gilbertlang.operations.{ones, WriteMatrix, norm, spones, fixpoint, load}
+
+import org.gilbertlang._
 
 object Examples {
 
@@ -24,7 +28,7 @@ object Examples {
 
     val A = load("/home/ssc/Desktop/gilbert/test/matrix.tsv", 3, 3)
 
-    val B = binarize(A)
+    val B = spones(A)
     val C = B.t * B
 
     val D = C / C.max()

@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.runtime.spark
+package org.gilbertlang.runtime.spark
 
 import scala.collection.JavaConversions._
 
@@ -26,14 +26,14 @@ import org.apache.spark.SparkContext
 import org.apache.spark.SparkContext._
 
 import org.apache.spark.rdd.RDD
-import io.ssc.gilbert.runtime.VectorFunctions
-import io.ssc.gilbert._
+import org.gilbertlang._
 
 import org.apache.mahout.math.function.Functions
 import org.apache.mahout.math.random.Normal
-import io.ssc.gilbert.optimization.CommonSubexpressionDetector
-import io.ssc.gilbert.shell.{printPlan, withSpark}
+import org.gilbertlang.shell.{printPlan, withSpark}
 import org.apache.spark.serializer.KryoSerializer
+import org.gilbertlang.runtime.{Executor, Executable, VectorFunctions}
+import org.gilbertlang.operations.{WriteScalarRef, AggregateMatrixTransformation, scalar, IterationStatePlaceholder, FixpointIteration, rand, ones, WriteMatrix, CellwiseMatrixTransformation, MatrixMult, Transpose, ScalarMatrixTransformation, LoadMatrix, ScalarsOperation, ScalarOperation, norm, load}
 
 object SparkExecutorRunner {
 

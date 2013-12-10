@@ -16,30 +16,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.runtime
+package org.gilbertlang.operations
 
-import org.apache.mahout.math.function.{DoubleDoubleFunction, VectorFunction, DoubleFunction}
-import org.apache.mahout.math.Vector
+object load {
+  def apply(path: String, numRows: Int, numColumns: Int) = LoadMatrix(path, numRows, numColumns)
+}
 
-object VectorFunctions {
-
-  def binarize = new DoubleFunction {
-    def apply(value: Double) = { if (value == 0) { 0 } else { 1 } }
+object fixpoint {
+  def apply(initialState: Matrix, updateFunction: Matrix => Matrix) = {
+    new FixpointIteration(initialState, updateFunction)
   }
+}
 
-  def sum = new VectorFunction {
-    def apply(v: Vector) = v.zSum()
-  }
 
-  def lengthSquared = new VectorFunction {
-    def apply(v: Vector) = v.getLengthSquared()
-  }
+object spones {
+  def apply(matrix: Matrix) = matrix.spones()
+}
 
-  def max = new DoubleDoubleFunction {
-    def apply(value1: Double, value2: Double) = math.max(value1, value2)
-  }
+object max {
+  def apply(matrix: Matrix) = matrix.max()
+}
 
-  def identity = new DoubleFunction {
-    def apply(value: Double) = value
-  }
+object norm {
+  def apply(matrix: Matrix, p: Int = 2) = matrix.norm(p)
+}
+
+object sum {
+  def apply(matrix: Matrix, dimension: Int = 1) = matrix.sum(dimension)
 }

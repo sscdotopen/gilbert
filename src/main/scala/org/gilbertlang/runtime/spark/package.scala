@@ -1,4 +1,4 @@
-package io.ssc.gilbert.runtime
+package org.gilbertlang.runtime
 
 import org.apache.mahout.math.{Matrix, MatrixWritable, VectorWritable, Vector}
 

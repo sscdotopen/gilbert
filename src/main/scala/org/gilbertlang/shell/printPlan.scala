@@ -16,18 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.shell
+package org.gilbertlang.shell
 
-import io.ssc.gilbert._
-import io.ssc.gilbert.AggregateMatrixTransformation
-import io.ssc.gilbert.MatrixMult
-import io.ssc.gilbert.scalar
-import io.ssc.gilbert.CellwiseMatrixTransformation
-import io.ssc.gilbert.WriteMatrix
-import io.ssc.gilbert.Transpose
-import io.ssc.gilbert.ones
-import io.ssc.gilbert.rand
-import io.ssc.gilbert.LoadMatrix
+import org.gilbertlang.operations.{WriteScalarRef, IterationStatePlaceholder, FixpointIteration, VectorwiseMatrixTransformation, CellwiseMatrixMatrixTransformation, ScalarMatrixTransformation, AggregateMatrixTransformation, scalar, rand, ones, WriteMatrix, CellwiseMatrixTransformation, MatrixMult, Transpose, LoadMatrix}
+import org.gilbertlang.runtime.Executable
 
 object printPlan {
 

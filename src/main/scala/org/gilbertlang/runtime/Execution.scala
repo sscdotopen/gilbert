@@ -1,4 +1,4 @@
-package io.ssc.gilbert
+package org.gilbertlang.runtime
 
 import java.util.concurrent.atomic.AtomicInteger
 import scala.collection.mutable

@@ -16,23 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.runtime.reference
+package org.gilbertlang.runtime.reference
 
-import io.ssc.gilbert._
 import org.apache.mahout.math.{DenseMatrix, SparseRowMatrix}
-import io.ssc.gilbert.runtime.VectorFunctions
-import io.ssc.gilbert.AggregateMatrixTransformation
-import io.ssc.gilbert.MatrixMult
-import io.ssc.gilbert.CellwiseMatrixTransformation
-import io.ssc.gilbert.WriteMatrix
-import io.ssc.gilbert.Transpose
-import io.ssc.gilbert.LoadMatrix
-import io.ssc.gilbert.ScalarMatrixTransformation
 import org.apache.mahout.math.random.Normal
-import io.ssc.gilbert.optimization.CommonSubexpressionDetector
-import io.ssc.gilbert.shell.{local, printPlan}
+import org.gilbertlang.shell.{local, printPlan}
 
 import scala.io.Source
+import org.gilbertlang.runtime.{Executor, Executable, VectorFunctions}
+import org.gilbertlang.operations.{WriteScalarRef, scalar, IterationStatePlaceholder, FixpointIteration, rand, ones, VectorwiseMatrixTransformation, CellwiseMatrixMatrixTransformation, AggregateMatrixTransformation, WriteMatrix, CellwiseMatrixTransformation, MatrixMult, Transpose, ScalarMatrixTransformation, LoadMatrix, VectorwiseOperation, CellwiseOperation, ScalarsOperation, ScalarOperation, norm, load}
+
 
 object ReferenceExecutorRunner {
 

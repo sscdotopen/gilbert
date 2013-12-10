@@ -16,14 +16,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.shell
+package org.gilbertlang.shell
 
-import io.ssc.gilbert._
-import io.ssc.gilbert.runtime.reference.{ReferenceExecutorRunner, ReferenceExecutor}
+import org.gilbertlang.runtime.reference.ReferenceExecutor
 
-import io.ssc.gilbert.runtime.spark.SparkExecutor
-import io.ssc.gilbert.WriteMatrix
-import io.ssc.gilbert.WriteScalarRef
+import org.gilbertlang.runtime.spark.SparkExecutor
+import org.gilbertlang.operations.{WriteScalarRef, WriteMatrix, ScalarRef, Matrix}
+import org.gilbertlang.runtime.Executable
 
 object local {
   def apply(executable: Executable) = {

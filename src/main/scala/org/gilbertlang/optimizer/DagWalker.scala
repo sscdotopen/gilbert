@@ -16,20 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.optimization
+package org.gilbertlang.optimizer
 
-import io.ssc.gilbert._
-import io.ssc.gilbert.MatrixMult
-import io.ssc.gilbert.WriteMatrix
-import io.ssc.gilbert.Transpose
-import io.ssc.gilbert.ones
-import io.ssc.gilbert.CellwiseMatrixTransformation
-import io.ssc.gilbert.rand
-import io.ssc.gilbert.LoadMatrix
-import io.ssc.gilbert.AggregateMatrixTransformation
-import io.ssc.gilbert.scalar
-import io.ssc.gilbert.ScalarMatrixTransformation
 import scala.collection.mutable.HashSet
+import org.gilbertlang.operations.{WriteScalarRef, IterationStatePlaceholder, FixpointIteration, VectorwiseMatrixTransformation, CellwiseMatrixMatrixTransformation, AggregateMatrixTransformation, scalar, rand, ones, WriteMatrix, CellwiseMatrixTransformation, MatrixMult, Transpose, ScalarMatrixTransformation, LoadMatrix}
+import org.gilbertlang.runtime.Executable
 
 abstract class DagWalker {
 

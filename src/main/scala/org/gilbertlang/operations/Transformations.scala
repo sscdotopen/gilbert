@@ -16,12 +16,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert
+package org.gilbertlang.operations
 
-import io.ssc.gilbert.ScalarsOperation._
-import io.ssc.gilbert.CellwiseOperation._
-import io.ssc.gilbert.VectorwiseOperation._
-import io.ssc.gilbert.ScalarOperation.ScalarOperation
+import ScalarsOperation._
+import CellwiseOperation._
+import VectorwiseOperation._
+import ScalarOperation.ScalarOperation
 
 
 case class LoadMatrix(path: String, numRows: Int, numColumns: Int) extends Matrix

@@ -1,6 +1,7 @@
-package io.ssc.gilbert.optimization
+package org.gilbertlang.optimizer
 
-import io.ssc.gilbert.{IterationStatePlaceholder, Executable}
+import org.gilbertlang.operations.IterationStatePlaceholder
+import org.gilbertlang.runtime.Executable
 
 class IterationStateDetector(val transformation: Executable) extends DagWalker {
 

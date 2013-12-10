@@ -16,7 +16,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert
+package org.gilbertlang.operations
+
+import org.gilbertlang.runtime.Executable
+
 
 abstract class Matrix() extends Executable {
 
@@ -31,7 +34,7 @@ abstract class Matrix() extends Executable {
   def :*(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Multiplication) }
   def :/(other: Matrix) = { CellwiseMatrixMatrixTransformation(this, other, CellwiseOperation.Division) }
 
-  def binarize() = { CellwiseMatrixTransformation(this, ScalarOperation.Binarize) }
+  def spones() = { CellwiseMatrixTransformation(this, ScalarOperation.Binarize) }
 
   def max() = { AggregateMatrixTransformation(this, ScalarsOperation.Maximum) }
   def norm(p: Int) = {

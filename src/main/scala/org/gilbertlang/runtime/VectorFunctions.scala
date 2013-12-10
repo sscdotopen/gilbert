@@ -16,30 +16,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert
+package org.gilbertlang.runtime
 
-object ScalarOperation extends Enumeration {
-  type ScalarOperation = Value
-  val Binarize = Value
-}
+import org.apache.mahout.math.function.{DoubleDoubleFunction, VectorFunction, DoubleFunction}
+import org.apache.mahout.math.Vector
 
-object ScalarsOperation extends Enumeration {
-  type ScalarsOperation = Value
-  //TODO does norm2 belong here?
-  val Addition, Subtraction, Multiplication, Division, Maximum, Norm2 = Value
-}
+object VectorFunctions {
 
-object CellwiseOperation extends Enumeration {
-  type CellwiseOperation = Value
-  val Addition, Subtraction, Multiplication, Division = Value
-}
+  def binarize = new DoubleFunction {
+    def apply(value: Double) = { if (value == 0) { 0 } else { 1 } }
+  }
 
-object VectorwiseOperation extends Enumeration {
-  type VectorwiseOperation = Value
-  val Max, Min, Average, Norm2Squared, Norm2, NormalizeL1, Sum = Value
-}
+  def sum = new VectorFunction {
+    def apply(v: Vector) = v.zSum()
+  }
 
-object MatrixwiseOperation extends Enumeration {
-  type MatrixwiseOperation = Value
-  val RowSums = Value
+  def lengthSquared = new VectorFunction {
+    def apply(v: Vector) = v.getLengthSquared()
+  }
+
+  def max = new DoubleDoubleFunction {
+    def apply(value1: Double, value2: Double) = math.max(value1, value2)
+  }
+
+  def identity = new DoubleFunction {
+    def apply(value: Double) = value
+  }
 }

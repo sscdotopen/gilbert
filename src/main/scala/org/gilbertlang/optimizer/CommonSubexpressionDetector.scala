@@ -16,11 +16,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.optimization
+package org.gilbertlang.optimizer
 
-import io.ssc.gilbert.Executable
+import org.gilbertlang.runtime.Executable
 
-case class CommonSubexpressionCandidate(val rootId: Int, val iterationId: Option[Int], 
+case class CommonSubexpressionCandidate(val rootId: Int, val iterationId: Option[Int],
                                         val containsIterationState: Boolean)
 
 //TODO needs to handle iteration state!

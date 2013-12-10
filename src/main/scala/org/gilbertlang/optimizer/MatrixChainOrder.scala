@@ -1,5 +1,4 @@
-package io.ssc.gilbert.optimization
-
+package org.gilbertlang.optimizer
 
 object PlayMC {
 

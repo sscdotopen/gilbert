@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package io.ssc.gilbert.shell
+package org.gilbertlang.shell
 
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interpreter.ILoop
@@ -36,10 +36,11 @@ class GilbertShell extends ILoop {
 
   addThunk {
     intp.beQuietDuring {
-      intp.addImports("io.ssc.gilbert._")
-      intp.addImports("io.ssc.gilbert.runtime._")
-      intp.addImports("io.ssc.gilbert.runtime.reference._")
-      intp.addImports("io.ssc.gilbert.shell._")
+      intp.addImports("org.gilbertlang._")
+      intp.addImports("org.gilbertlang.runtime._")
+      intp.addImports("org.gilbertlang.runtime.reference._")
+      intp.addImports("org.gilbertlang.shell._")
+      intp.addImports("org.gilbertlang.operations._")
     }
   }
 
